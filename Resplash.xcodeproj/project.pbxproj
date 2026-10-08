@@ -1,0 +1,554 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		03E29C683077A76E00781600 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 03E29C523077A76D00781600 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 03E29C593077A76D00781600;
+			remoteInfo = Resplash;
+		};
+		03E29C723077A76E00781600 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 03E29C523077A76D00781600 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 03E29C593077A76D00781600;
+			remoteInfo = Resplash;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		03E29C5A3077A76D00781600 /* Resplash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Resplash.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		03E29C673077A76E00781600 /* ResplashTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ResplashTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		03E29C713077A76E00781600 /* ResplashUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ResplashUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		03E29C5C3077A76D00781600 /* Resplash */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resplash;
+			sourceTree = "<group>";
+		};
+		03E29C6A3077A76E00781600 /* ResplashTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ResplashTests;
+			sourceTree = "<group>";
+		};
+		03E29C743077A76E00781600 /* ResplashUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ResplashUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		03E29C573077A76D00781600 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		03E29C643077A76E00781600 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		03E29C6E3077A76E00781600 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		03E29C513077A76D00781600 = {
+			isa = PBXGroup;
+			children = (
+				03E29C5C3077A76D00781600 /* Resplash */,
+				03E29C6A3077A76E00781600 /* ResplashTests */,
+				03E29C743077A76E00781600 /* ResplashUITests */,
+				03E29C5B3077A76D00781600 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		03E29C5B3077A76D00781600 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				03E29C5A3077A76D00781600 /* Resplash.app */,
+				03E29C673077A76E00781600 /* ResplashTests.xctest */,
+				03E29C713077A76E00781600 /* ResplashUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		03E29C593077A76D00781600 /* Resplash */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03E29C793077A76E00781600 /* Build configuration list for PBXNativeTarget "Resplash" */;
+			buildPhases = (
+				03E29C563077A76D00781600 /* Sources */,
+				03E29C573077A76D00781600 /* Frameworks */,
+				03E29C583077A76D00781600 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				03E29C5C3077A76D00781600 /* Resplash */,
+			);
+			name = Resplash;
+			productName = Resplash;
+			productReference = 03E29C5A3077A76D00781600 /* Resplash.app */;
+			productType = "com.apple.product-type.application";
+		};
+		03E29C663077A76E00781600 /* ResplashTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03E29C7C3077A76E00781600 /* Build configuration list for PBXNativeTarget "ResplashTests" */;
+			buildPhases = (
+				03E29C633077A76E00781600 /* Sources */,
+				03E29C643077A76E00781600 /* Frameworks */,
+				03E29C653077A76E00781600 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				03E29C693077A76E00781600 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				03E29C6A3077A76E00781600 /* ResplashTests */,
+			);
+			name = ResplashTests;
+			productName = ResplashTests;
+			productReference = 03E29C673077A76E00781600 /* ResplashTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		03E29C703077A76E00781600 /* ResplashUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03E29C7F3077A76E00781600 /* Build configuration list for PBXNativeTarget "ResplashUITests" */;
+			buildPhases = (
+				03E29C6D3077A76E00781600 /* Sources */,
+				03E29C6E3077A76E00781600 /* Frameworks */,
+				03E29C6F3077A76E00781600 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				03E29C733077A76E00781600 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				03E29C743077A76E00781600 /* ResplashUITests */,
+			);
+			name = ResplashUITests;
+			productName = ResplashUITests;
+			productReference = 03E29C713077A76E00781600 /* ResplashUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		03E29C523077A76D00781600 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					03E29C593077A76D00781600 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					03E29C663077A76E00781600 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 03E29C593077A76D00781600;
+					};
+					03E29C703077A76E00781600 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 03E29C593077A76D00781600;
+					};
+				};
+			};
+			buildConfigurationList = 03E29C553077A76D00781600 /* Build configuration list for PBXProject "Resplash" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 03E29C513077A76D00781600;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 03E29C5B3077A76D00781600 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				03E29C593077A76D00781600 /* Resplash */,
+				03E29C663077A76E00781600 /* ResplashTests */,
+				03E29C703077A76E00781600 /* ResplashUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		03E29C583077A76D00781600 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		03E29C653077A76E00781600 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		03E29C6F3077A76E00781600 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		03E29C563077A76D00781600 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		03E29C633077A76E00781600 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		03E29C6D3077A76E00781600 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		03E29C693077A76E00781600 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03E29C593077A76D00781600 /* Resplash */;
+			targetProxy = 03E29C683077A76E00781600 /* PBXContainerItemProxy */;
+		};
+		03E29C733077A76E00781600 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03E29C593077A76D00781600 /* Resplash */;
+			targetProxy = 03E29C723077A76E00781600 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		03E29C773077A76E00781600 /* Debug configuration for PBXProject "Resplash" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		03E29C783077A76E00781600 /* Release configuration for PBXProject "Resplash" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		03E29C7A3077A76E00781600 /* Debug configuration for PBXNativeTarget "Resplash" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.Resplash;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		03E29C7B3077A76E00781600 /* Release configuration for PBXNativeTarget "Resplash" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.Resplash;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		03E29C7D3077A76E00781600 /* Debug configuration for PBXNativeTarget "ResplashTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.ResplashTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Resplash.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Resplash";
+			};
+			name = Debug;
+		};
+		03E29C7E3077A76E00781600 /* Release configuration for PBXNativeTarget "ResplashTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.ResplashTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Resplash.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Resplash";
+			};
+			name = Release;
+		};
+		03E29C803077A76E00781600 /* Debug configuration for PBXNativeTarget "ResplashUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.ResplashUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Resplash;
+			};
+			name = Debug;
+		};
+		03E29C813077A76E00781600 /* Release configuration for PBXNativeTarget "ResplashUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CE9NQX8QWW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.georgehardcastle.ResplashUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Resplash;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		03E29C553077A76D00781600 /* Build configuration list for PBXProject "Resplash" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03E29C773077A76E00781600 /* Debug configuration for PBXProject "Resplash" */,
+				03E29C783077A76E00781600 /* Release configuration for PBXProject "Resplash" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		03E29C793077A76E00781600 /* Build configuration list for PBXNativeTarget "Resplash" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03E29C7A3077A76E00781600 /* Debug configuration for PBXNativeTarget "Resplash" */,
+				03E29C7B3077A76E00781600 /* Release configuration for PBXNativeTarget "Resplash" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		03E29C7C3077A76E00781600 /* Build configuration list for PBXNativeTarget "ResplashTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03E29C7D3077A76E00781600 /* Debug configuration for PBXNativeTarget "ResplashTests" */,
+				03E29C7E3077A76E00781600 /* Release configuration for PBXNativeTarget "ResplashTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		03E29C7F3077A76E00781600 /* Build configuration list for PBXNativeTarget "ResplashUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03E29C803077A76E00781600 /* Debug configuration for PBXNativeTarget "ResplashUITests" */,
+				03E29C813077A76E00781600 /* Release configuration for PBXNativeTarget "ResplashUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 03E29C523077A76D00781600 /* Project object */;
+	validationLevel = 1;
+}
