@@ -1,9 +1,14 @@
 import SwiftUI
 
 struct LibraryView: View {
-    static let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    static let columnSpacing: CGFloat = 12
+    static let rowSpacing: CGFloat = 16
 
     @ObservedObject var viewModel: PhotoListViewModel
+    let namespace: Namespace.ID
+    /// The photo currently shown in the detail carousel, if any. Read-only: the Library never owns selection.
+    let selectedID: Photo.ID?
+    let onSelect: (Photo) -> Void
 
     var body: some View {
         content
@@ -27,17 +32,31 @@ struct LibraryView: View {
     }
 
     private var grid: some View {
-        ScrollView {
-            LazyVGrid(columns: Self.columns, alignment: .leading, spacing: 16) {
-                ForEach(viewModel.photos) { photo in
-                    PhotoGridCell(photo: photo)
-                        .equatable()
-                        .onAppear { viewModel.photoDidAppear(photo) }
+        ScrollViewReader { proxy in
+            ScrollView {
+                HStack(alignment: .top, spacing: Self.columnSpacing) {
+                    ForEach(Array(MasonryLayout.columns(for: viewModel.photos).enumerated()), id: \.offset) { _, column in
+                        LazyVStack(spacing: Self.rowSpacing) {
+                            ForEach(column) { photo in
+                                Button { onSelect(photo) } label: {
+                                    PhotoGridCell(photo: photo, namespace: namespace, isSelected: selectedID == photo.id)
+                                        .equatable()
+                                }
+                                .buttonStyle(.plain)
+                                .onAppear { viewModel.photoDidAppear(photo) }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
-            }
-            .padding(.horizontal, 12)
+                .padding(.horizontal, 12)
 
-            LibraryFooterView(footer: viewModel.footer, retry: viewModel.retryLoadMore)
+                LibraryFooterView(footer: viewModel.footer, retry: viewModel.retryLoadMore)
+            }
+            // Keep the grid in step with the carousel so dismissing lands on the right cell.
+            .onChange(of: selectedID) { id in
+                if let id { proxy.scrollTo(id) }
+            }
         }
     }
 }
