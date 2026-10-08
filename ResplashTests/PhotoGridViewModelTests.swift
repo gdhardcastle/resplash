@@ -7,14 +7,14 @@ private func stubPhotos(_ range: ClosedRange<Int>) -> [Photo] {
 }
 
 @MainActor
-struct PhotoListViewModelTests {
+struct PhotoGridViewModelTests {
     private func makeViewModel(
         perPage: Int = 5,
         threshold: Int = 2,
         _ handler: @escaping MockPhotoRepository.Handler
-    ) -> (PhotoListViewModel, MockPhotoRepository) {
+    ) -> (PhotoGridViewModel, MockPhotoRepository) {
         let repository = MockPhotoRepository(handler)
-        return (PhotoListViewModel(source: .list, repository: repository, perPage: perPage, prefetchThreshold: threshold), repository)
+        return (PhotoGridViewModel(source: .list, repository: repository, perPage: perPage, prefetchThreshold: threshold), repository)
     }
 
     /// Three pages of five photos: 1…5, 6…10, 11…15.
@@ -33,7 +33,7 @@ struct PhotoListViewModelTests {
         #expect(viewModel.state == .loadingFirstPage)
         await viewModel.settled()
 
-        #expect(viewModel.state == .loaded)
+        #expect(viewModel.isLoaded)
         #expect(viewModel.photos.map(\.id) == ["1", "2", "3", "4", "5"])
     }
 
@@ -66,7 +66,7 @@ struct PhotoListViewModelTests {
         viewModel.photoDidAppear(last)
         viewModel.photoDidAppear(last)
         viewModel.photoDidAppear(viewModel.photos[3])
-        #expect(viewModel.footer == .loading)
+        #expect(viewModel.nextPageStatus == .loading)
 
         await gate.open()
         await viewModel.settled()
@@ -132,11 +132,11 @@ struct PhotoListViewModelTests {
 
         viewModel.reload()
         await viewModel.settled()
-        #expect(viewModel.state == .loaded)
+        #expect(viewModel.isLoaded)
         #expect(viewModel.photos.count == 5)
     }
 
-    @Test func laterPageFailureKeepsPhotosAndShowsFooterError() async {
+    @Test func laterPageFailureKeepsPhotosAndShowsNextPageError() async {
         let (viewModel, repository) = makeViewModel { _, page in
             if page == 2 { throw PhotoRepositoryError.network }
             return Page(items: stubPhotos(1...5), nextPage: 2)
@@ -146,11 +146,11 @@ struct PhotoListViewModelTests {
         viewModel.photoDidAppear(viewModel.photos.last!)
         await viewModel.settled()
 
-        #expect(viewModel.state == .loaded)
+        #expect(viewModel.isLoaded)
         #expect(viewModel.photos.count == 5)
-        #expect(viewModel.footer == .failed(.offline))
+        #expect(viewModel.nextPageStatus == .failed(.network))
 
-        // No automatic retry loop while the footer error is showing.
+        // No automatic retry loop while the next-page error is showing.
         viewModel.photoDidAppear(viewModel.photos.last!)
         await viewModel.settled()
         #expect(repository.requestedPages == [1, 2])
@@ -179,89 +179,28 @@ struct PhotoListViewModelTests {
         await viewModel.settled()
 
         #expect(viewModel.photos.map(\.id) == ["1", "2", "3", "4", "5"])
-        #expect(viewModel.state == .loaded)
+        #expect(viewModel.isLoaded)
     }
 
-    // MARK: Changing source (search)
-
-    @Test func changeSourceReloadsFromTheFirstPage() async {
-        let (viewModel, repository) = makeViewModel { source, page in
-            switch source {
-            case .list where page == 1: Page(items: stubPhotos(1...5), nextPage: 2)
-            case .list: Page(items: stubPhotos(6...10), nextPage: nil)
-            case .search: Page(items: stubPhotos(101...103), nextPage: nil)
-            }
-        }
+    @Test func reloadDropsThePreviousPhotosImmediately() async {
+        let (viewModel, _) = makeViewModel(pagedHandler())
         viewModel.loadFirstPageIfNeeded()
         await viewModel.settled()
-        viewModel.photoDidAppear(viewModel.photos.last!)
-        await viewModel.settled()
-        #expect(repository.requestedPages == [1, 2])
+        #expect(viewModel.photos.count == 5)
 
-        viewModel.changeSource(.search("fox"))
+        viewModel.reload()
+        // Photos live inside `.loaded`, so there is nothing left to show while the first page loads.
         #expect(viewModel.state == .loadingFirstPage)
         #expect(viewModel.photos.isEmpty)
         await viewModel.settled()
-
-        #expect(viewModel.photos.map(\.id) == ["101", "102", "103"])
-        #expect(repository.requestedPages == [1, 2, 1])
-    }
-
-    @Test func changingToTheSameSourceIsANoOp() async {
-        let (viewModel, repository) = makeViewModel(pagedHandler())
-        viewModel.loadFirstPageIfNeeded()
-        await viewModel.settled()
-
-        viewModel.changeSource(.list)
-        await viewModel.settled()
-
-        #expect(repository.requestedPages == [1])
         #expect(viewModel.photos.count == 5)
-    }
-
-    @Test func staleResponseFromThePreviousSourceNeverLands() async {
-        let gate = Gate()
-        let (viewModel, _) = makeViewModel { source, _ in
-            if source == .search("cat") {
-                await gate.wait()
-                return Page(items: [Photo.stub("cat")], nextPage: nil)
-            }
-            return Page(items: [Photo.stub("dog")], nextPage: nil)
-        }
-        viewModel.changeSource(.search("cat"))   // in flight, held open
-        viewModel.changeSource(.search("dog"))   // supersedes it
-        await viewModel.settled()
-
-        await gate.open()                        // the "cat" request finally returns
-        await Task.yield()
-        await viewModel.settled()
-
-        #expect(viewModel.photos.map(\.id) == ["dog"])
-        #expect(viewModel.state == .loaded)
-    }
-
-    @Test func resetReturnsToIdleWithoutAnyRequest() async {
-        let (viewModel, repository) = makeViewModel(pagedHandler())
-        viewModel.changeSource(.search("fox"))
-        await viewModel.settled()
-        #expect(repository.requestedPages == [1])
-
-        viewModel.reset()
-        #expect(viewModel.state == .idle)
-        #expect(viewModel.photos.isEmpty)
-        #expect(repository.requestedPages == [1])
-
-        // The same query can be searched again afterwards.
-        viewModel.changeSource(.search("fox"))
-        await viewModel.settled()
-        #expect(repository.requestedPages == [1, 1])
     }
 
     @Test func emptyFirstPageIsLoadedWithNoPhotos() async {
         let (viewModel, _) = makeViewModel { _, _ in Page(items: [], nextPage: nil) }
         viewModel.loadFirstPageIfNeeded()
         await viewModel.settled()
-        #expect(viewModel.state == .loaded)
+        #expect(viewModel.isLoaded)
         #expect(viewModel.photos.isEmpty)
     }
 }
@@ -271,5 +210,16 @@ actor Counter {
     func next() -> Int {
         value += 1
         return value
+    }
+}
+
+private extension PhotoGridViewModel {
+    var isLoaded: Bool {
+        if case .loaded = state { true } else { false }
+    }
+
+    /// The next-page status, or `nil` unless the grid is `.loaded`.
+    var nextPageStatus: NextPageStatus? {
+        if case .loaded(_, let status) = state { status } else { nil }
     }
 }

@@ -1,58 +1,63 @@
 import SwiftUI
 
+/// The Library screen: the browsable list with search on top.
 struct LibraryView: View {
-    static let columnSpacing: CGFloat = 12
-    static let rowSpacing: CGFloat = 16
-
-    @ObservedObject var viewModel: PhotoListViewModel
-    let namespace: Namespace.ID
-    /// The photo currently shown in the detail carousel, if any. Read-only: the Library never owns selection.
-    let selectedID: Photo.ID?
-    /// Shown when a load succeeds but returns nothing.
-    let emptyMessage: String
-    let onSelect: (Photo) -> Void
+    
+    @ObservedObject var viewModel: LibraryViewModel
+    @ObservedObject var hero: HeroTransition
+    
+    /// One namespace per grid, so a photo that appears in both can never clash in the hero transition.
+    let listNamespace: Namespace.ID
+    let searchNamespace: Namespace.ID
 
     var body: some View {
-        switch viewModel.state {
-        case .idle, .loadingFirstPage:
-            LibrarySkeletonView()
-        case .failed(let failure):
-            LibraryErrorView(failure: failure, retry: viewModel.reload)
-        case .loaded where viewModel.photos.isEmpty:
-            Text(emptyMessage)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .loaded:
-            grid
+        NavigationStack {
+            // Both grids stay alive and cross-fade, which is what keeps the list's scroll position.
+            ZStack {
+                PhotoGridView(
+                    viewModel: viewModel.list,
+                    namespace: listNamespace,
+                    selectedID: viewModel.isSearching ? nil : hero.selectedID,
+                    emptyMessage: "No photos",
+                    onSelect: select
+                )
+                .opacity(viewModel.isSearching ? 0 : 1)
+                .allowsHitTesting(!viewModel.isSearching)
+                .accessibilityHidden(viewModel.isSearching)
+
+                if viewModel.isSearching {
+                    searchGrid.transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: viewModel.isSearching)
+            .navigationTitle("Library")
+            .searchable(
+                text: $viewModel.query,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search photos"
+            )
+        }
+        .task { viewModel.start() }
+    }
+
+    @ViewBuilder
+    private var searchGrid: some View {
+        if let results = viewModel.searchResults {
+            PhotoGridView(
+                viewModel: results,
+                namespace: searchNamespace,
+                selectedID: hero.selectedID,
+                emptyMessage: "No results for “\(viewModel.trimmedQuery)”",
+                onSelect: select
+            )
+        } else {
+            // Typed, but the debounce hasn't fired yet.
+            PhotoGridSkeletonView()
         }
     }
 
-    private var grid: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                HStack(alignment: .top, spacing: Self.columnSpacing) {
-                    ForEach(Array(MasonryLayout.columns(for: viewModel.photos).enumerated()), id: \.offset) { _, column in
-                        LazyVStack(spacing: Self.rowSpacing) {
-                            ForEach(column) { photo in
-                                Button { onSelect(photo) } label: {
-                                    PhotoGridCell(photo: photo, namespace: namespace, isSelected: selectedID == photo.id)
-                                        .equatable()
-                                }
-                                .buttonStyle(.plain)
-                                .onAppear { viewModel.photoDidAppear(photo) }
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-                .padding(.horizontal, 12)
-
-                LibraryFooterView(footer: viewModel.footer, retry: viewModel.retryLoadMore)
-            }
-            // Keep the grid in step with the carousel so dismissing lands on the right cell.
-            .onChange(of: selectedID) { id in
-                if let id { proxy.scrollTo(id) }
-            }
-        }
+    private func select(_ photo: Photo) {
+        UIApplication.dismissKeyboard()
+        hero.present(photo)
     }
 }

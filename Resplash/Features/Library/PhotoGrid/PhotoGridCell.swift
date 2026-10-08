@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Takes value-type input only, so a change elsewhere in the view model doesn't re-render every cell.
 struct PhotoGridCell: View, Equatable {
+    
     let photo: Photo
     let namespace: Namespace.ID
     /// True while the detail carousel is showing this photo.
