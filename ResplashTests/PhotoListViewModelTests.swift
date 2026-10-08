@@ -182,6 +182,81 @@ struct PhotoListViewModelTests {
         #expect(viewModel.state == .loaded)
     }
 
+    // MARK: Changing source (search)
+
+    @Test func changeSourceReloadsFromTheFirstPage() async {
+        let (viewModel, repository) = makeViewModel { source, page in
+            switch source {
+            case .list where page == 1: Page(items: stubPhotos(1...5), nextPage: 2)
+            case .list: Page(items: stubPhotos(6...10), nextPage: nil)
+            case .search: Page(items: stubPhotos(101...103), nextPage: nil)
+            }
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2])
+
+        viewModel.changeSource(.search("fox"))
+        #expect(viewModel.state == .loadingFirstPage)
+        #expect(viewModel.photos.isEmpty)
+        await viewModel.settled()
+
+        #expect(viewModel.photos.map(\.id) == ["101", "102", "103"])
+        #expect(repository.requestedPages == [1, 2, 1])
+    }
+
+    @Test func changingToTheSameSourceIsANoOp() async {
+        let (viewModel, repository) = makeViewModel(pagedHandler())
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+
+        viewModel.changeSource(.list)
+        await viewModel.settled()
+
+        #expect(repository.requestedPages == [1])
+        #expect(viewModel.photos.count == 5)
+    }
+
+    @Test func staleResponseFromThePreviousSourceNeverLands() async {
+        let gate = Gate()
+        let (viewModel, _) = makeViewModel { source, _ in
+            if source == .search("cat") {
+                await gate.wait()
+                return Page(items: [Photo.stub("cat")], nextPage: nil)
+            }
+            return Page(items: [Photo.stub("dog")], nextPage: nil)
+        }
+        viewModel.changeSource(.search("cat"))   // in flight, held open
+        viewModel.changeSource(.search("dog"))   // supersedes it
+        await viewModel.settled()
+
+        await gate.open()                        // the "cat" request finally returns
+        await Task.yield()
+        await viewModel.settled()
+
+        #expect(viewModel.photos.map(\.id) == ["dog"])
+        #expect(viewModel.state == .loaded)
+    }
+
+    @Test func resetReturnsToIdleWithoutAnyRequest() async {
+        let (viewModel, repository) = makeViewModel(pagedHandler())
+        viewModel.changeSource(.search("fox"))
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1])
+
+        viewModel.reset()
+        #expect(viewModel.state == .idle)
+        #expect(viewModel.photos.isEmpty)
+        #expect(repository.requestedPages == [1])
+
+        // The same query can be searched again afterwards.
+        viewModel.changeSource(.search("fox"))
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 1])
+    }
+
     @Test func emptyFirstPageIsLoadedWithNoPhotos() async {
         let (viewModel, _) = makeViewModel { _, _ in Page(items: [], nextPage: nil) }
         viewModel.loadFirstPageIfNeeded()

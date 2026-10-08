@@ -26,7 +26,7 @@ final class PhotoListViewModel: ObservableObject {
     /// Upper bound on consecutive fetches when a page contains only photos we already have.
     private static let maxPagesPerLoad = 3
 
-    private let source: PhotoSource
+    private var source: PhotoSource
     private let repository: PhotoRepository
     private let perPage: Int
     private let prefetchThreshold: Int
@@ -35,7 +35,7 @@ final class PhotoListViewModel: ObservableObject {
     private var loadedIDs = Set<String>()
     /// Non-nil while a fetch is in flight; doubles as the guard against duplicate triggers.
     private var loadTask: Task<Void, Never>?
-    /// Bumped by `reload()` so a response from before the reset can never land in the new list.
+    /// Bumped whenever results are discarded so a response from before the reset can never land in the new list.
     private var generation = 0
 
     init(source: PhotoSource, repository: PhotoRepository, perPage: Int = 30, prefetchThreshold: Int = 6) {
@@ -52,6 +52,25 @@ final class PhotoListViewModel: ObservableObject {
 
     /// Discards everything and starts again from page 1 (retry after a first-page failure, pull to refresh).
     func reload() {
+        discardResults()
+        startLoadingNextPage()
+    }
+
+    /// Switches to a different source (a new search query) and loads it from page 1.
+    /// Anything still in flight for the old source is dropped.
+    func changeSource(_ newSource: PhotoSource) {
+        guard newSource != source else { return }
+        source = newSource
+        reload()
+    }
+
+    /// Back to a pristine, idle state with nothing loaded and no request made. Used when a search is cleared.
+    func reset() {
+        source = .search("")
+        discardResults()
+    }
+
+    private func discardResults() {
         generation += 1
         loadTask?.cancel()
         loadTask = nil
@@ -60,7 +79,6 @@ final class PhotoListViewModel: ObservableObject {
         nextPage = 1
         footer = .hidden
         state = .idle
-        startLoadingNextPage()
     }
 
     /// Called as each cell appears; loads the next page once the user is near the end.
