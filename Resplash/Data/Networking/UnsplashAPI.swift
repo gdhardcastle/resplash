@@ -7,15 +7,15 @@ nonisolated struct UnsplashAPI: Sendable {
 
     let accessKey: String
 
-    /// `GET /photos` is Unsplash's Editorial feed.
-    func editorialRequest(page: Int, perPage: Int) -> URLRequest {
+    /// `GET /photos` lists the Editorial feed.
+    func listPhotos(page: Int, perPage: Int) -> URLRequest {
         makeRequest(path: "photos", query: [
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "per_page", value: String(perPage)),
         ])
     }
 
-    func searchRequest(query: String, page: Int, perPage: Int) -> URLRequest {
+    func searchPhotos(query: String, page: Int, perPage: Int) -> URLRequest {
         makeRequest(path: "search/photos", query: [
             URLQueryItem(name: "query", value: query),
             URLQueryItem(name: "page", value: String(page)),

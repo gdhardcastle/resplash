@@ -1,11 +1,16 @@
 import SwiftUI
 
 struct RootView: View {
-    var body: some View {
-        Text("Resplash")
-    }
-}
+    @StateObject private var feed: PhotoListViewModel
 
-#Preview {
-    RootView()
+    init(repository: PhotoRepository) {
+        _feed = StateObject(wrappedValue: PhotoListViewModel(source: .list, repository: repository))
+    }
+
+    var body: some View {
+        NavigationStack {
+            LibraryView(viewModel: feed)
+                .navigationTitle("Library")
+        }
+    }
 }

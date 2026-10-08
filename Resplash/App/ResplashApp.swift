@@ -2,14 +2,16 @@ import SwiftUI
 
 @main
 struct ResplashApp: App {
-    private let config = Result { try Config() }
+    /// Composition root: the only place that knows concrete types. `nil` when no access key is configured.
+    private let repository: PhotoRepository? = (try? Config()).map {
+        UnsplashPhotoRepository(api: UnsplashAPI(accessKey: $0.unsplashAccessKey))
+    }
 
     var body: some Scene {
         WindowGroup {
-            switch config {
-            case .success:
-                RootView()
-            case .failure:
+            if let repository {
+                RootView(repository: repository)
+            } else {
                 MissingConfigView()
             }
         }

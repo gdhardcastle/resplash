@@ -30,6 +30,7 @@
 		0A1000000000000000000001 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		0A1000000000000000000002 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		0A1000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0A1000000000000000000005 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -95,6 +96,7 @@
 			children = (
 				0A1000000000000000000001 /* Shared.xcconfig */,
 				0A1000000000000000000002 /* Secrets.example.xcconfig */,
+				0A1000000000000000000005 /* Secrets.xcconfig */,
 				0A1000000000000000000003 /* Info.plist */,
 			);
 			path = Config;

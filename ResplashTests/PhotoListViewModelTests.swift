@@ -1,0 +1,200 @@
+import Foundation
+import Testing
+@testable import Resplash
+
+private func stubPhotos(_ range: ClosedRange<Int>) -> [Photo] {
+    range.map { Photo.stub(String($0)) }
+}
+
+@MainActor
+struct PhotoListViewModelTests {
+    private func makeViewModel(
+        perPage: Int = 5,
+        threshold: Int = 2,
+        _ handler: @escaping MockPhotoRepository.Handler
+    ) -> (PhotoListViewModel, MockPhotoRepository) {
+        let repository = MockPhotoRepository(handler)
+        return (PhotoListViewModel(source: .list, repository: repository, perPage: perPage, prefetchThreshold: threshold), repository)
+    }
+
+    /// Three pages of five photos: 1…5, 6…10, 11…15.
+    private func pagedHandler() -> MockPhotoRepository.Handler {
+        { _, page in
+            let start = (page - 1) * 5 + 1
+            return Page(items: stubPhotos(start...start + 4), nextPage: page < 3 ? page + 1 : nil)
+        }
+    }
+
+    @Test func firstLoadPopulatesPhotos() async {
+        let (viewModel, _) = makeViewModel(pagedHandler())
+        #expect(viewModel.state == .idle)
+
+        viewModel.loadFirstPageIfNeeded()
+        #expect(viewModel.state == .loadingFirstPage)
+        await viewModel.settled()
+
+        #expect(viewModel.state == .loaded)
+        #expect(viewModel.photos.map(\.id) == ["1", "2", "3", "4", "5"])
+    }
+
+    @Test func loadsNextPageOnlyNearTheEnd() async {
+        let (viewModel, repository) = makeViewModel(pagedHandler())
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+
+        viewModel.photoDidAppear(viewModel.photos[0])
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1])
+
+        viewModel.photoDidAppear(viewModel.photos[3]) // within the last 2
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2])
+        #expect(viewModel.photos.count == 10)
+    }
+
+    @Test func repeatedTriggersWhileLoadingMakeOneRequest() async {
+        let gate = Gate()
+        let (viewModel, repository) = makeViewModel { _, page in
+            if page == 2 { await gate.wait() }
+            let start = (page - 1) * 5 + 1
+            return Page(items: stubPhotos(start...start + 4), nextPage: page + 1)
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+
+        let last = viewModel.photos[4]
+        viewModel.photoDidAppear(last)
+        viewModel.photoDidAppear(last)
+        viewModel.photoDidAppear(viewModel.photos[3])
+        #expect(viewModel.footer == .loading)
+
+        await gate.open()
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2])
+    }
+
+    @Test func stopsAtTheLastPage() async {
+        let (viewModel, repository) = makeViewModel(pagedHandler())
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        for _ in 0..<2 {
+            viewModel.photoDidAppear(viewModel.photos.last!)
+            await viewModel.settled()
+        }
+        #expect(viewModel.photos.count == 15)
+
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2, 3])
+    }
+
+    @Test func overlappingPagesAreDeduplicated() async {
+        let (viewModel, _) = makeViewModel { _, page in
+            page == 1
+                ? Page(items: stubPhotos(1...5), nextPage: 2)
+                : Page(items: stubPhotos(4...8), nextPage: nil)
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+
+        #expect(viewModel.photos.map(\.id) == (1...8).map(String.init))
+    }
+
+    @Test func pageOfOnlyDuplicatesFetchesTheFollowingPage() async {
+        let (viewModel, repository) = makeViewModel { _, page in
+            switch page {
+            case 1: Page(items: stubPhotos(1...5), nextPage: 2)
+            case 2: Page(items: stubPhotos(1...5), nextPage: 3)
+            default: Page(items: stubPhotos(6...10), nextPage: nil)
+            }
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+
+        #expect(repository.requestedPages == [1, 2, 3])
+        #expect(viewModel.photos.count == 10)
+    }
+
+    @Test func firstPageFailureThenRetry() async {
+        let attempts = Counter()
+        let (viewModel, _) = makeViewModel { _, _ in
+            if await attempts.next() == 1 { throw PhotoRepositoryError.rateLimited }
+            return Page(items: stubPhotos(1...5), nextPage: nil)
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        #expect(viewModel.state == .failed(.rateLimited))
+        #expect(viewModel.photos.isEmpty)
+
+        viewModel.reload()
+        await viewModel.settled()
+        #expect(viewModel.state == .loaded)
+        #expect(viewModel.photos.count == 5)
+    }
+
+    @Test func laterPageFailureKeepsPhotosAndShowsFooterError() async {
+        let (viewModel, repository) = makeViewModel { _, page in
+            if page == 2 { throw PhotoRepositoryError.network }
+            return Page(items: stubPhotos(1...5), nextPage: 2)
+        }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+
+        #expect(viewModel.state == .loaded)
+        #expect(viewModel.photos.count == 5)
+        #expect(viewModel.footer == .failed(.offline))
+
+        // No automatic retry loop while the footer error is showing.
+        viewModel.photoDidAppear(viewModel.photos.last!)
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2])
+
+        viewModel.retryLoadMore()
+        await viewModel.settled()
+        #expect(repository.requestedPages == [1, 2, 2])
+    }
+
+    @Test func staleResponseNeverLandsAfterReload() async {
+        let gate = Gate()
+        let calls = Counter()
+        let (viewModel, _) = makeViewModel { _, _ in
+            if await calls.next() == 1 {
+                await gate.wait()
+                return Page(items: [Photo.stub("stale")], nextPage: nil)
+            }
+            return Page(items: stubPhotos(1...5), nextPage: nil)
+        }
+        viewModel.loadFirstPageIfNeeded()
+        viewModel.reload()
+        await viewModel.settled()
+
+        await gate.open() // the first (now stale) request finally returns
+        await Task.yield()
+        await viewModel.settled()
+
+        #expect(viewModel.photos.map(\.id) == ["1", "2", "3", "4", "5"])
+        #expect(viewModel.state == .loaded)
+    }
+
+    @Test func emptyFirstPageIsLoadedWithNoPhotos() async {
+        let (viewModel, _) = makeViewModel { _, _ in Page(items: [], nextPage: nil) }
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        #expect(viewModel.state == .loaded)
+        #expect(viewModel.photos.isEmpty)
+    }
+}
+
+actor Counter {
+    private var value = 0
+    func next() -> Int {
+        value += 1
+        return value
+    }
+}

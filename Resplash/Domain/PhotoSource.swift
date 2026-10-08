@@ -1,4 +1,4 @@
 nonisolated enum PhotoSource: Equatable, Sendable {
-    case editorial
+    case list
     case search(String)
 }

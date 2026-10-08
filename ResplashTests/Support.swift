@@ -62,3 +62,57 @@ enum Fixtures {
         "{\"total\": 100, \"total_pages\": \(totalPages), \"results\": [\(photos.joined(separator: ","))]}"
     }
 }
+
+extension Photo {
+    static func stub(_ id: String) -> Photo {
+        Photo(
+            id: id,
+            caption: "Photo \(id)",
+            width: 400,
+            height: 300,
+            colorHex: "#808080",
+            smallURL: URL(string: "https://example.com/\(id)-small")!,
+            regularURL: URL(string: "https://example.com/\(id)-regular")!,
+            photographer: Photographer(name: "Jane", profileURL: nil)
+        )
+    }
+}
+
+/// Scripted `PhotoRepository`. The handler may suspend, so tests can hold a request in flight.
+final class MockPhotoRepository: PhotoRepository, @unchecked Sendable {
+    typealias Handler = @Sendable (PhotoSource, Int) async throws -> Page<Photo>
+
+    private let handler: Handler
+    private let lock = NSLock()
+    private var _requestedPages: [Int] = []
+
+    init(_ handler: @escaping Handler) {
+        self.handler = handler
+    }
+
+    var requestedPages: [Int] {
+        lock.withLock { _requestedPages }
+    }
+
+    func photos(for source: PhotoSource, page: Int, perPage: Int) async throws -> Page<Photo> {
+        lock.withLock { _requestedPages.append(page) }
+        return try await handler(source, page)
+    }
+}
+
+/// Lets a test hold a mock request open and release it later.
+actor Gate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var isOpen = false
+
+    func wait() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func open() {
+        isOpen = true
+        continuation?.resume()
+        continuation = nil
+    }
+}

@@ -11,18 +11,18 @@ nonisolated struct UnsplashPhotoRepository: PhotoRepository {
 
     func photos(for source: PhotoSource, page: Int, perPage: Int) async throws -> Page<Photo> {
         switch source {
-        case .editorial:
-            return try await editorial(page: page, perPage: perPage)
+        case .list:
+            return try await listPhotos(page: page, perPage: perPage)
         case .search(let query):
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             // A blank query would waste a request from a small hourly quota.
             guard !trimmed.isEmpty else { return Page(items: [], nextPage: nil) }
-            return try await search(query: trimmed, page: page, perPage: perPage)
+            return try await searchPhotos(query: trimmed, page: page, perPage: perPage)
         }
     }
 
-    private func editorial(page: Int, perPage: Int) async throws -> Page<Photo> {
-        let (data, response) = try await perform(api.editorialRequest(page: page, perPage: perPage))
+    private func listPhotos(page: Int, perPage: Int) async throws -> Page<Photo> {
+        let (data, response) = try await perform(api.listPhotos(page: page, perPage: perPage))
         let dtos = try decode([PhotoDTO].self, from: data)
         return Page(
             items: dtos.map { $0.toDomain() },
@@ -30,8 +30,8 @@ nonisolated struct UnsplashPhotoRepository: PhotoRepository {
         )
     }
 
-    private func search(query: String, page: Int, perPage: Int) async throws -> Page<Photo> {
-        let (data, _) = try await perform(api.searchRequest(query: query, page: page, perPage: perPage))
+    private func searchPhotos(query: String, page: Int, perPage: Int) async throws -> Page<Photo> {
+        let (data, _) = try await perform(api.searchPhotos(query: query, page: page, perPage: perPage))
         let body = try decode(SearchResponseDTO.self, from: data)
         return Page(
             items: body.results.map { $0.toDomain() },
@@ -39,7 +39,7 @@ nonisolated struct UnsplashPhotoRepository: PhotoRepository {
         )
     }
 
-    /// The editorial list has no `total_pages`; Unsplash signals more pages with a `Link: rel="next"` header.
+    /// The list endpoint has no `total_pages`; Unsplash signals more pages with a `Link: rel="next"` header.
     /// Without that header, fall back to treating a short page as the end.
     private func hasNextPage(_ response: HTTPURLResponse, itemCount: Int, perPage: Int) -> Bool {
         if let link = response.value(forHTTPHeaderField: "Link") {
