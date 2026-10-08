@@ -27,6 +27,9 @@
 		03E29C5A3077A76D00781600 /* Resplash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Resplash.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		03E29C673077A76E00781600 /* ResplashTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ResplashTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		03E29C713077A76E00781600 /* ResplashUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ResplashUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A1000000000000000000001 /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
+		0A1000000000000000000002 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
+		0A1000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +72,7 @@
 		03E29C513077A76D00781600 = {
 			isa = PBXGroup;
 			children = (
+				0A1000000000000000000004 /* Config */,
 				03E29C5C3077A76D00781600 /* Resplash */,
 				03E29C6A3077A76E00781600 /* ResplashTests */,
 				03E29C743077A76E00781600 /* ResplashUITests */,
@@ -84,6 +88,16 @@
 				03E29C713077A76E00781600 /* ResplashUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0A1000000000000000000004 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				0A1000000000000000000001 /* Shared.xcconfig */,
+				0A1000000000000000000002 /* Secrets.example.xcconfig */,
+				0A1000000000000000000003 /* Info.plist */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -245,6 +259,7 @@
 /* Begin XCBuildConfiguration section */
 		03E29C773077A76E00781600 /* Debug configuration for PBXProject "Resplash" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0A1000000000000000000001 /* Shared.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -310,6 +325,7 @@
 		};
 		03E29C783077A76E00781600 /* Release configuration for PBXProject "Resplash" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0A1000000000000000000001 /* Shared.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -376,6 +392,7 @@
 				DEVELOPMENT_TEAM = CE9NQX8QWW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Resplash;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -409,6 +426,7 @@
 				DEVELOPMENT_TEAM = CE9NQX8QWW;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Config/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Resplash;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

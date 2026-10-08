@@ -1,0 +1,6 @@
+// Shared build settings for Debug and Release.
+// The real key lives in the gitignored Secrets.xcconfig (copy Secrets.example.xcconfig).
+
+UNSPLASH_ACCESS_KEY =
+
+#include? "Secrets.xcconfig"
