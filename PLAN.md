@@ -11,7 +11,6 @@ Context file for Claude Code. It captures the challenge brief, the architecture 
 **Logistics**
 - Duration: 48-72 hours (early submission possible).
 - Submission: zip or GitHub repo link, plus **one Loom recording (max 3 minutes, in English)** showing the working solution and explaining the main technical choices, with a focus on the code. Mention assumptions and limitations.
-- Do not use "BeReal" or "Voodoo" names in public repositories.
 
 **Technical requirements**
 - Swift and SwiftUI (UIKit allowed only if justified).
