@@ -11,6 +11,7 @@ pipeline lands. Change one thing between runs: how images are loaded.
 | Device | A physical iPhone, the same one for both runs. Hitches are not meaningful on the simulator. |
 | Scheme | The shared `Resplash` scheme passes `-ProfilingHUD` on its **Profile** action only, so Product → Profile (⌘I) shows the HUD and a normal Run (⌘R) does not. |
 | Build | Product → Profile (⌘I). It builds **Release**. `Resplash/Config/Secrets.xcconfig` must be present. |
+| Launch, don't attach | The recording must **launch** the app (Product → Profile does). Attaching to a running app misses allocations made before it attached, gives you no launch arguments (so no HUD), and a second Record continues in the same warm process instead of starting cold. |
 | Conditions | Low Power Mode off, same Wi-Fi, other apps closed, auto-lock off, device cool. |
 | API quota | About 500 photos is about 17 list requests (30 per page). The demo limit is believed to be 50 requests per hour (confirm in the Unsplash dashboard), so do at most two runs per hour. Image downloads come from the CDN and do not count. |
 | Trace files | Save `.trace` files outside version control (`*.trace` is gitignored). Only the results table is committed, in the README. |
@@ -27,7 +28,28 @@ Each line turns green with a ✓ when it reaches its milestone, and a haptic fir
 can watch Instruments instead of the phone. The photo line is live, so it goes grey again if you scroll
 back above 100. Loading is in pages of 30, so `Loaded` crosses 500 at 510.
 
-Without the argument (a normal Run) nothing is shown. The HUD is not observable by the grid, so it does not add view
+Without the argument (a normal Run) nothing is shown.
+
+### Signposts in the trace
+
+The same moments are written into the Instruments trace as **Points of Interest** events, so you do
+not need to click anything while recording. In Instruments they appear on the *Points of Interest* track
+(add the instrument if the template does not include it):
+
+| Event | When |
+|---|---|
+| `Profiling HUD enabled` | App start. If this is missing, the launch argument never reached the app. |
+| `Page loaded: N photos` | The first cell appearance after a page arrived, with the running total. |
+| `Milestone: 500 loaded` | `Loaded` first reaches 500. |
+| `Milestone: photo 100 reached` | `Photo` first reaches 100 (fires again each time you cross it going down). |
+
+Pages do not add a flat 30: the feed shifts between requests, so adjacent pages overlap and the
+duplicates are dropped (for example 30 → 47 → 77 → 100). Expect `Loaded` to cross 500 at some number
+above it, not at 510.
+
+To read a number at a milestone, drag-select a range on the timeline from the start to that event; the
+Statistics view then reflects that range. Check the method by selecting the whole run and confirming it
+matches the full-run figure. The HUD is not observable by the grid, so it does not add view
 updates to the numbers being measured.
 
 ## 1. The scroll script (identical every run)
@@ -48,7 +70,8 @@ One trace per template, each running the full script.
 | Template | Record | Where to find it |
 |---|---|---|
 | **Network** (HTTP Traffic) | Total image requests, unique URLs, **duplicate count** (target 0) | Group requests by URL and compare total with unique. |
-| **Allocations** | **Persistent Bytes** at the end of A, B and C (use *Mark Generation* after each phase); note ImageIO and CG raster rows | Statistics view. |
+| **Allocations** | **Persistent Bytes** at the end of A, B and C; note ImageIO and CG raster rows | Statistics view, over a range selected up to each signpost. |
+| **VM Tracker** (add to the Allocations template) | Dirty and swapped size by region type, especially ImageIO, CG image and IOSurface | Turn on automatic snapshots. **Decoded image memory lives in VM, not in the heap categories, so Allocations alone does not show it.** |
 | **Animation Hitches** | Hitch count and hitch time ratio (ms per second) per phase | Phase A matters most. |
 | **Time Profiler** | % of main-thread time in image decoding (ImageIO, CGImageSource) | Select the main thread, invert the call tree, hide system libraries. |
 | **SwiftUI** | `PhotoGridCell` body updates per page load | The SwiftUI instrument's view body updates, filtered by cell type. |

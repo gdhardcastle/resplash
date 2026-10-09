@@ -1,4 +1,5 @@
 import Combine
+import OSLog
 import SwiftUI
 
 /// Opt-in measurement aid for Instruments runs: launch with `-ProfilingHUD`, which the scheme's
@@ -7,6 +8,10 @@ import SwiftUI
 /// The probe is deliberately not an `ObservableObject`. Grid cells report into it from `onAppear`, and
 /// observing it from the screen would re-render the views being measured. Only the small HUD view
 /// subscribes, through `updates`.
+///
+/// It also marks the same moments in the Instruments trace as Points of Interest signposts, so a
+/// recording shows exactly when each page landed and when 100 / 500 were reached, without having to
+/// click anything while recording.
 @MainActor
 final class ProfilingProbe {
     struct Snapshot: Equatable {
@@ -14,6 +19,14 @@ final class ProfilingProbe {
         var loaded = 0
         /// 1-based position of the photo whose cell most recently appeared: roughly where the scroll is.
         var latest = 0
+
+        func crossedLoadedMilestone(from old: Snapshot) -> Bool {
+            old.loaded < ProfilingProbe.loadedMilestone && loaded >= ProfilingProbe.loadedMilestone
+        }
+
+        func crossedPhotoMilestone(from old: Snapshot) -> Bool {
+            old.latest < ProfilingProbe.photoMilestone && latest >= ProfilingProbe.photoMilestone
+        }
     }
 
     /// Positions the runbook cares about.
@@ -24,6 +37,16 @@ final class ProfilingProbe {
 
     private var snapshot = Snapshot()
     private var indexByID: [Photo.ID: Int] = [:]
+
+    /// Shows up on the Points of Interest track in Instruments.
+    private let signposter = OSSignposter(
+        logHandle: OSLog(subsystem: "com.georgehardcastle.Resplash", category: .pointsOfInterest)
+    )
+
+    private init() {
+        // Proof in the trace that the launch argument reached the app.
+        signposter.emitEvent("Profiling HUD enabled")
+    }
 
     private static let flag = "-ProfilingHUD"
 
@@ -49,7 +72,19 @@ final class ProfilingProbe {
         next.loaded = photos.count
         if let index = indexByID[photo.id] { next.latest = index + 1 }
         guard next != snapshot else { return }
+        let previous = snapshot
         snapshot = next
+
+        // Pages land in batches, so a change in `loaded` is the first appearance after a page arrived.
+        if next.loaded != previous.loaded {
+            signposter.emitEvent("Page loaded", "\(next.loaded) photos")
+        }
+        if next.crossedLoadedMilestone(from: previous) {
+            signposter.emitEvent("Milestone: 500 loaded", "\(next.loaded) photos")
+        }
+        if next.crossedPhotoMilestone(from: previous) {
+            signposter.emitEvent("Milestone: photo 100 reached")
+        }
         updates.send(next)
     }
 }

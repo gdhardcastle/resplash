@@ -17,8 +17,7 @@ struct ProfilingHUDView: View {
         .padding(8)
         .allowsHitTesting(false)
         .onReceive(probe.updates) { next in
-            if crossed(snapshot.loaded, next.loaded, ProfilingProbe.loadedMilestone)
-                || crossed(snapshot.latest, next.latest, ProfilingProbe.photoMilestone) {
+            if next.crossedLoadedMilestone(from: snapshot) || next.crossedPhotoMilestone(from: snapshot) {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
             snapshot = next
@@ -28,9 +27,5 @@ struct ProfilingHUDView: View {
     private func line(_ title: String, _ value: Int, milestone: Int) -> some View {
         Text("\(title) \(value)/\(milestone)\(value >= milestone ? " ✓" : "")")
             .foregroundStyle(value >= milestone ? Color.green : Color.primary)
-    }
-
-    private func crossed(_ old: Int, _ new: Int, _ milestone: Int) -> Bool {
-        old < milestone && new >= milestone
     }
 }
