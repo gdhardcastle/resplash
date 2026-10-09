@@ -179,16 +179,56 @@ swipes, close). Percentages are shares of main-thread samples in the paging wind
 The caption text changes on every page, inside the paging `withAnimation`. Left to animate, SwiftUI
 interpolated the old and new text each frame and redrew the bar on the CPU. Every other suspect (the
 grid underneath, the chrome's opacity group and materials, the page modifiers, the page cross-fade)
-made no difference. The fix is one modifier on the caption bar.
+made no difference **to the CPU rendering**. That test did not measure update spikes, so it says nothing about
+whether the grid contributes to the hitches (see the device re-measure below). The fix is one modifier on the
+caption bar.
 
 Caveats: Simulator, one recording per variant, and the swipes were driven by tool calls, so timing
 varies; the unchanged-effect variants range from 32% to 44%, so differences of under about 8 points are
 noise. This shows the CPU rendering is gone, **not** that the device's hitches are: the hitch figures
 above are from the device and must be re-measured with the fix.
 
+### Device re-measure after the caption fix (iPhone 13 Pro, 62.0 s, second recording)
+
+Same sequence and the same instruments. The Time Profiler confirms the fix does what it was meant to; the
+hitches are not fixed.
+
+| Phase | Seconds | Hitches | Hitch time ratio | Baseline |
+|---|---|---|---|---|
+| Grid (everything outside the pager) | 41.1 | 14 | 4.05 ms/s | 1.63 ms/s |
+| **Paging #1** | 11.7 | 22 | **55.7 ms/s** | 67.4 ms/s |
+| **Paging #2** | 6.8 | 19 | **84.4 ms/s** | 53.8 ms/s |
+| Pager opening / closing (x2) | 2.4 | 4 | 13 to 27 ms/s | clean |
+| Whole run | 62.0 | 59 | 23.3 ms/s | 18.8 ms/s |
+
+| While paging | After the fix | Before |
+|---|---|---|
+| Offscreen CPU rendering (share of main-thread samples) | **0.0%** | 43.6% |
+| `CGDrawingLayer` draw | **0.2%** | 46.2% |
+| Main-thread CPU | 189 ms/s | 294 ms/s |
+| SwiftUI graph update (`AG::`) | 64.9% | 37.6% |
+
+- **The CPU rendering was real but not the cause of the hitches.** Paging is still 55 to 84 ms/s.
+- **Instruments' own diagnosis:** 35 of the 41 paging hitches (1,146 of 1,225 ms) are "Potentially
+  expensive app update(s)". The main thread is only about 38% busy in the hitch windows and no app
+  symbol is on the stacks, so these are individual late frames, not general overload.
+- **The late frames are gesture transactions.** While paging, 245 `Transaction for Gesture` update
+  groups cost 1,442 ms; 24 of them are 8 ms or more (1,010 ms in total), up to 60 ms each. Updates rooted
+  in `Gesture` are 46.5% of update cost while paging; updates rooted in `ScrollPrefetch` (only the grid's
+  lazy stack produces those) are 16.4%.
+- **Likely mechanism, not yet confirmed:** each page flip changes the selection in `LibraryView`, which
+  re-evaluates the grid underneath the pager and scrolls it to the new photo, inside the frame that
+  finishes the swipe. In the earlier recording the grid, `MasonryColumns` and `LibraryView` bodies each
+  re-evaluated 22 times while paging. The proposed test is to keep the pager's current page local to the
+  pager and tell the grid only when the pager is dismissed.
+- **Failed grid images:** you saw cells showing the small grey photo icon after scrolling back to about
+  photo 100; tapping one loaded it in the pager, and it only appeared in the grid after dismissing. That
+  icon is `AsyncImage`'s failure state, so the load failed and the cell stayed that way until the view was
+  recreated. On the Simulator, fast scrolling cancelled 6 in-flight image requests (`-999`) and reset 6
+  HTTP/2 streams, but no visible cell failed. The device error is not known.
+
 ### Not yet measured
 
-- [ ] **Re-profile on the device with the caption fix**: hitches while paging (baseline 54 to 67 ms/s).
 - [ ] Network instrument on the device (per-URL duplicates), if it can be made to stop crashing.
 - [ ] Values at each milestone (select 0 s to the signpost in Instruments and read Statistics).
 - [ ] A trustworthy `PhotoGridCell` body-update count (the SwiftUI instrument recorded 91 for the whole grid scroll, which cannot be complete).
