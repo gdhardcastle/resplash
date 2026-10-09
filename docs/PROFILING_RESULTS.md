@@ -105,6 +105,47 @@ Going down is one request per photo. Coming back is about 1.65 requests per phot
 matches the repeated decoding. A relaunch without deleting the app was served entirely from `URLCache`, so
 a cold run needs a fresh install.
 
+## Allocations: `AsyncImage` against the image loader
+
+Allocations with VM Tracker on the iPhone 13 Pro, Release, launched with `-ProfilingHUD`, in
+`Allocations.trace`. Run 1 is the `AsyncImage` baseline above (52.6 s). Runs 2 and 3 are the loader at
+`b77cc81`, **cold** (fresh install, 39.8 s) and **warm** (relaunch with the disk cache populated, 30.3 s).
+Each run scrolled to about 500 photos and back to photo 100 by hand, so the pace differs: 500 loaded at 29.3 s,
+16.9 s and 16.7 s. The pager was not opened.
+
+| | `AsyncImage` (run 1) | Loader, cold (run 2) | Loader, warm (run 3) |
+|---|---|---|---|
+| App's own dirty memory at the end (VM Tracker, tool overhead excluded) | 46.2 MiB | 126.9 MiB | 143.9 MiB |
+| Decoded image memory at the end | IOSurface 11.2 MiB | CG Raster Data 96.3 MiB | CG Raster Data 105.7 MiB |
+| Image decodes (`CGImageRead` created) | 971 | not available | **935** |
+| Live heap + anonymous VM (Statistics) | 30.0 MiB | not available | 125.7 MiB |
+| Allocated over the run (Statistics) | 1,111.7 MiB | not available | 3,338.2 MiB |
+
+**What I could not measure.** `xctrace` returns the same Allocations Statistics for every run in a trace
+file. They match run 3 (its 105.7 MiB of CG Raster Data equals run 3's VM Tracker figure), so the cold run's
+decode count and totals are unavailable until it is saved as the selected run. The VM Tracker data is per
+run and its run 1 totals match the baseline section exactly. Downloads per URL are not in this trace at all:
+the loader's `Image download` signposts are in the `ImagePipeline` category, which this template does not
+record.
+
+**Reading**
+
+- **The decode count did not fall: 935 against 971.** For about 506 photos that is roughly 1.85 decodes
+  each, the same shape as the baseline. A decoded thumbnail is about 0.7 MiB (652 MiB over 935 decodes), so
+  the 100 MB cache holds about 140 of them. Scrolling to 500 and back to 100 passes about 400 photos that
+  have already been evicted, and each is decoded again from the disk cache. This is inferred from the
+  numbers, not measured as a hit rate.
+- **Memory went up, as expected, and more than I guessed.** App memory is about 80 to 100 MiB higher
+  (46 to 127 and 144 MiB), nearly all of it the decoded-image cache sitting at its limit. The baseline held
+  about 43 images alive at the end; the loader holds about 150.
+- **Total allocated bytes tripled, but are not comparable.** `AsyncImage` decodes appear as IOSurface; the
+  loader's appear as four sizeable categories (ImageIO JPEG data 673 MiB, CG Image 653, CG Raster Data 652,
+  CGSImageHandle 633) which look like the same decoded bytes seen at different layers, so adding them
+  overstates it. Compare decode counts, not totals.
+- **So the loader's gains are not in this table.** The hitch drop (run 6 to 9), duplicate downloads, request
+  cancellation and the retry of a failed load are separate effects. What this run shows is that the memory
+  cache is too small for a return trip of this length.
+
 ## Why paging hitched: the caption animation
 
 **Baseline per phase** (57.2 s). Grid 1.63 ms/s over 38.4 s (5 hitches); pager opening clean;
@@ -171,9 +212,10 @@ investigated). Two of the three paging hitches are Instruments' "Potentially exp
 
 ## Not yet measured
 
-- [ ] Allocations and Network with the loader: decode count, allocated bytes, cache hit rate and downloads
-      per URL (the loader marks each download as an `Image download` signpost in the `ImagePipeline`
-      category, which the Points of Interest template does not record).
+- [ ] The cold run's Allocations Statistics (decode count and totals): select run 2 in Instruments, save,
+      and re-export.
+- [ ] Cache hit rate and downloads per URL with the loader. The Allocations template cannot show them;
+      the loader needs hit and miss counters, or its `ImagePipeline` signposts recorded.
 - [ ] The grid scroll phase with the loader (hitches, update counts).
 - [ ] Network instrument on the device, if it can be made to stop crashing.
 - [ ] A trustworthy `PhotoGridCell` body-update count (the SwiftUI instrument recorded 91 for a whole grid
