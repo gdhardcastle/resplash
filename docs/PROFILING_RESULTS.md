@@ -155,15 +155,40 @@ this run), which fits `AsyncImage` decoding off the main thread.
 - **The cause is CPU rendering in SwiftUI.** While paging, 44% of main-thread time is a
   `CGDrawingLayer` redrawing on the CPU: a transparency layer, a colour-matrix filter and text glyphs
   (`RB::DisplayList::Layer::make_cgimage` into `CGContextEndTransparencyLayer`).
-- **Which view's layer that is has not been isolated.** Two candidates fit the data:
-  1. The pager's chrome: a group `.opacity` over two `.ultraThinMaterial` backgrounds, with caption
-     text that changes on every page.
-  2. The grid underneath the pager: it is wrapped in an always-applied `.opacity`, and it is changed on
-     every page flip (the selected cell flips, and the grid scrolls to it).
-  Open and close change the selection once and stay clean, so a per-flip change fits both.
+- **The cause was isolated by elimination, below:** the caption bar's text animating when the page
+  changes.
+
+**Finding the cause (Simulator, one change at a time)**
+
+The Simulator reproduces the problem structurally (CPU-drawn layers while paging, none in the grid), so
+it was used as a test bench: `xctrace` Time Profiler with Points of Interest, Release builds on an
+iPhone 18 Pro Simulator (iOS 27.0), the same driven sequence each time (open the first photo, ten
+swipes, close). Percentages are shares of main-thread samples in the paging window.
+
+| Variant | Offscreen CPU render | `CGDrawingLayer` draw | Main-thread CPU |
+|---|---|---|---|
+| Control (unmodified) | 35.8% | 42.8% | 145 ms/s |
+| Grid's selection frozen while paging | 43.6% | 51.1% | 148 ms/s |
+| Chrome without group opacity or materials | 32.1% | 45.4% | 157 ms/s |
+| Pages without clip, matched geometry, per-page opacity or pager scale | 38.8% | 46.8% | 153 ms/s |
+| Pages not cross-faded on insert/remove, **and** caption bar not animated | **0.0%** | 5.9% | 99 ms/s |
+| Pages not cross-faded only | 39.5% | 47.0% | 152 ms/s |
+| **Caption bar not animated only** | **0.0%** | 6.7% | 101 ms/s |
+| The committed fix (caption bar not animated) | **0.0%** | 5.6% | 111 ms/s |
+
+The caption text changes on every page, inside the paging `withAnimation`. Left to animate, SwiftUI
+interpolated the old and new text each frame and redrew the bar on the CPU. Every other suspect (the
+grid underneath, the chrome's opacity group and materials, the page modifiers, the page cross-fade)
+made no difference. The fix is one modifier on the caption bar.
+
+Caveats: Simulator, one recording per variant, and the swipes were driven by tool calls, so timing
+varies; the unchanged-effect variants range from 32% to 44%, so differences of under about 8 points are
+noise. This shows the CPU rendering is gone, **not** that the device's hitches are: the hitch figures
+above are from the device and must be re-measured with the fix.
 
 ### Not yet measured
 
+- [ ] **Re-profile on the device with the caption fix**: hitches while paging (baseline 54 to 67 ms/s).
 - [ ] Network instrument on the device (per-URL duplicates), if it can be made to stop crashing.
 - [ ] Values at each milestone (select 0 s to the signpost in Instruments and read Statistics).
 - [ ] A trustworthy `PhotoGridCell` body-update count (the SwiftUI instrument recorded 91 for the whole grid scroll, which cannot be complete).
