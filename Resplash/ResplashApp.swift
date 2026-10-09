@@ -8,10 +8,13 @@ struct ResplashApp: App {
         UnsplashPhotoRepository(api: UnsplashAPI(accessKey: $0.unsplashAccessKey))
     }
 
+    private let imageLoader = ImageLoader.makeLive()
+
     var body: some Scene {
         WindowGroup {
             if let repository {
                 LibraryView(repository: repository)
+                    .environment(\.imageLoader, imageLoader)
             } else {
                 MissingConfigView()
             }

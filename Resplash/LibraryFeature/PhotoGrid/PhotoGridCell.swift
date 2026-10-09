@@ -36,14 +36,14 @@ struct PhotoGridCell: View, Equatable {
         } else {
             placeholder
                 .overlay {
-                    AsyncImage(url: photo.smallURL) { phase in
+                    RemoteImage(request: photo.thumbnailRequest) { phase in
                         switch phase {
-                        case .success(let image):
+                        case .loaded(let image):
                             image.resizable().scaledToFill()
-                        case .failure:
+                        case .failed:
                             Image(systemName: "photo")
                                 .foregroundStyle(.secondary)
-                        default:
+                        case .loading:
                             Color.clear
                         }
                     }

@@ -17,8 +17,8 @@ struct PhotoPagerPage: View {
                 // The small image is usually already loaded by the grid, so it shows instantly while
                 // the larger one downloads on top of it.
                 ZStack {
-                    remoteImage(photo.smallURL)
-                    remoteImage(photo.regularURL)
+                    remoteImage(photo.thumbnailRequest)
+                    remoteImage(photo.fullScreenRequest)
                 }
             }
             .clipped()
@@ -31,11 +31,12 @@ struct PhotoPagerPage: View {
             .accessibilityLabel(photo.caption)
     }
 
-    private func remoteImage(_ url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            if let image = phase.image {
+    private func remoteImage(_ request: ImageRequest) -> some View {
+        RemoteImage(request: request) { phase in
+            switch phase {
+            case .loaded(let image):
                 image.resizable().scaledToFill()
-            } else {
+            case .loading, .failed:
                 Color.clear
             }
         }

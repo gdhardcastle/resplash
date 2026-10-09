@@ -20,6 +20,7 @@ struct PhotoPagerView: View {
     /// The page being shown. Owned here, not by the Library: a page flip then re-evaluates only the
     /// pager. Reporting every flip to the Library made it re-evaluate and scroll the whole grid
     /// underneath, inside the frame that finishes the swipe, and that was the cause of the hitches.
+    @Environment(\.imageLoader) private var imageLoader
     @State private var selection: Photo.ID
     @State private var settleTask: Task<Void, Never>?
     @State private var drag: CGSize = .zero
@@ -88,6 +89,7 @@ struct PhotoPagerView: View {
             if let photo = photos.first(where: { $0.id == id }) {
                 viewModel.photoDidAppear(photo)
             }
+            prefetchFullScreenImages(around: id)
             // Restart the pause timer on every page change; it fires only if the user stays put.
             settleTask?.cancel()
             settleTask = Task {
@@ -97,6 +99,13 @@ struct PhotoPagerView: View {
             }
         }
         .onDisappear { settleTask?.cancel() }
+    }
+
+    /// The neighbouring pages load their own images; this gets the next ones past them ready.
+    private func prefetchFullScreenImages(around id: Photo.ID) {
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        let ahead = [index - 2, index + 2].filter(photos.indices.contains).map { photos[$0].fullScreenRequest }
+        imageLoader.prefetch(ahead)
     }
 
     private var pager: some View {
