@@ -93,7 +93,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "-ProfilingHUD YES"
+            argument = "-ProfilingHUD"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

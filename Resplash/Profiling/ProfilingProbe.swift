@@ -1,8 +1,8 @@
 import Combine
 import SwiftUI
 
-/// Opt-in measurement aid for Instruments runs: launch with `-ProfilingHUD YES`
-/// (Edit Scheme → Profile → Arguments). Off by default, so normal builds never show it.
+/// Opt-in measurement aid for Instruments runs: launch with `-ProfilingHUD`, which the scheme's
+/// Profile action passes. Off by default, so normal builds never show it.
 ///
 /// The probe is deliberately not an `ObservableObject`. Grid cells report into it from `onAppear`, and
 /// observing it from the screen would re-render the views being measured. Only the small HUD view
@@ -25,8 +25,16 @@ final class ProfilingProbe {
     private var snapshot = Snapshot()
     private var indexByID: [Photo.ID: Int] = [:]
 
+    private static let flag = "-ProfilingHUD"
+
+    /// The HUD is on when the launch arguments contain `-ProfilingHUD`. The match is deliberately loose
+    /// because launchers tokenise differently: Xcode's Run splits `-ProfilingHUD YES` in two, while a
+    /// profiling launch may hand it over as one argument with a space in it. `-ProfilingHUD YES`
+    /// through `UserDefaults` still works too, for `simctl launch`.
     static func makeIfEnabled() -> ProfilingProbe? {
-        UserDefaults.standard.bool(forKey: "ProfilingHUD") ? ProfilingProbe() : nil
+        let isEnabled = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix(flag) }
+            || UserDefaults.standard.bool(forKey: "ProfilingHUD")
+        return isEnabled ? ProfilingProbe() : nil
     }
 
     func cellAppeared(_ photo: Photo, in photos: [Photo]) {

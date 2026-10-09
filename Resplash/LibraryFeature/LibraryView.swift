@@ -8,7 +8,7 @@ struct LibraryView: View {
     private static let heroAnimation = Animation.timingCurve(0.25, 0.8, 0.25, 1, duration: heroDuration)
 
     @StateObject private var viewModel: LibraryViewModel
-    /// Only exists when launched with `-ProfilingHUD YES`; see `ProfilingProbe`.
+    /// Only exists when launched with `-ProfilingHUD`; see `ProfilingProbe`.
     @State private var probe = ProfilingProbe.makeIfEnabled()
 
     /// The photo open in the pager. `nil` means the grid is showing.
