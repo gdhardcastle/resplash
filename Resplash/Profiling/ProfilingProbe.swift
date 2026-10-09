@@ -48,6 +48,56 @@ final class ProfilingProbe {
         signposter.emitEvent("Profiling HUD enabled")
     }
 
+    // MARK: Pager markers
+    //
+    // Intervals rather than points, so each phase is a bar on the Points of Interest track whose range
+    // can be selected for Animation Hitches, Time Profiler and the SwiftUI instrument:
+    //   "Pager open"    from tapping a photo until the pager has fully gone,
+    //   "Pager opening" the grid-to-pager flight,
+    //   "Pager closing" the pager-to-grid flight.
+    // Each ends at most once, so closing mid-flight or reopening quickly leaves nothing dangling.
+
+    private var openInterval: OSSignpostIntervalState?
+    private var openingInterval: OSSignpostIntervalState?
+    private var closingInterval: OSSignpostIntervalState?
+
+    func pagerWillOpen() {
+        endAllPagerIntervals()
+        openInterval = signposter.beginInterval("Pager open")
+        openingInterval = signposter.beginInterval("Pager opening")
+    }
+
+    /// The opening flight has landed.
+    func pagerDidFinishOpening() {
+        if let state = openingInterval {
+            signposter.endInterval("Pager opening", state)
+            openingInterval = nil
+        }
+    }
+
+    func pagerWillClose() {
+        pagerDidFinishOpening()
+        guard closingInterval == nil else { return }
+        closingInterval = signposter.beginInterval("Pager closing")
+    }
+
+    /// The closing flight has landed and the pager is gone.
+    func pagerDidClose() {
+        if let state = closingInterval {
+            signposter.endInterval("Pager closing", state)
+            closingInterval = nil
+        }
+        if let state = openInterval {
+            signposter.endInterval("Pager open", state)
+            openInterval = nil
+        }
+    }
+
+    private func endAllPagerIntervals() {
+        pagerDidFinishOpening()
+        pagerDidClose()
+    }
+
     private static let flag = "-ProfilingHUD"
 
     /// The HUD is on when the launch arguments contain `-ProfilingHUD`. The match is deliberately loose

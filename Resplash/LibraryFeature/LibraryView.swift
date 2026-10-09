@@ -100,23 +100,32 @@ struct LibraryView: View {
         UIApplication.dismissKeyboard()
         heroTask?.cancel()
         isHeroActive = true
+        probe?.pagerWillOpen()
         withAnimation(Self.heroAnimation) { selectedID = photo.id }
         // Once the flight lands, detach the page from the grid so paging can't trigger another one.
         heroTask = Task {
             try? await Task.sleep(for: .seconds(Self.heroDuration + 0.1))
             guard !Task.isCancelled else { return }
             isHeroActive = false
+            probe?.pagerDidFinishOpening()
         }
     }
 
     private func dismissPager() {
         heroTask?.cancel()
+        probe?.pagerWillClose()
         heroTask = Task {
             // Rejoin the hero id first, in its own update, so the flight back has a matching pair.
             isHeroActive = true
             try? await Task.sleep(for: .milliseconds(60))
             guard !Task.isCancelled else { return }
             withAnimation(Self.heroAnimation) { selectedID = nil }
+            // Profiling only: wait for the flight back to land so the marker covers all of it.
+            if let probe {
+                try? await Task.sleep(for: .seconds(Self.heroDuration + 0.1))
+                guard !Task.isCancelled else { return }
+                probe.pagerDidClose()
+            }
         }
     }
 }

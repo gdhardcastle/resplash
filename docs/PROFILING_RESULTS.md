@@ -104,7 +104,7 @@ counted; the figures are request totals. The scroll steps were driven by hand-sc
 - [ ] Time Profiler: share of main-thread time spent decoding.
 - [ ] SwiftUI instrument: `PhotoGridCell` body updates per page.
 - [ ] Warm run (relaunch without deleting the app).
-- [ ] Pager phase, with its own marker.
+- [ ] Pager phase (now marked in the trace by the `Pager open` / `opening` / `closing` intervals).
 
 ## Pipeline
 

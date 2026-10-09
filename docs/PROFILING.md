@@ -42,6 +42,13 @@ not need to click anything while recording. In Instruments they appear on the *P
 | `Page loaded: N photos` | The first cell appearance after a page arrived, with the running total. |
 | `Milestone: 500 loaded` | `Loaded` first reaches 500. |
 | `Milestone: photo 100 reached` | `Photo` first reaches 100 (fires again each time you cross it going down). |
+| `Pager open` (interval) | From tapping a photo until the pager has fully gone. Covers every swipe inside the pager. |
+| `Pager opening` (interval) | The grid-to-pager flight (about 0.5 s). |
+| `Pager closing` (interval) | The pager-to-grid flight (about 0.6 s), however the pager was closed (button or drag). |
+
+The pager markers are **intervals**, so each shows as a bar on the Points of Interest track. Select a
+bar's range for Animation Hitches, Time Profiler or the SwiftUI instrument to read that phase alone.
+If you close the pager while it is still opening, `Pager opening` ends at the moment you close.
 
 Pages do not add a flat 30: the feed shifts between requests, so adjacent pages overlap and the
 duplicates are dropped (for example 30 → 47 → 77 → 100). Expect `Loaded` to cross 500 at some number
@@ -59,7 +66,9 @@ updates to the numbers being measured.
 3. **Phase B, back to top.** Scroll back up to the top. This tests whether images come back without
    reloading.
 4. **Phase C, pager.** Scroll down until `Photo` shows ✓ (photo 100), open that photo, swipe 10 pages
-   forward, then close. This tests the grid flicker on return and the pager's own loading.
+   forward, then close. This tests the grid flicker on return and the pager's own loading. The
+   `Pager open`, `Pager opening` and `Pager closing` intervals mark this phase in the trace. Do it once
+   per recording at least; doing it twice (open, swipe, close, then again) gives a repeat to compare.
 5. **Warm run (optional).** Relaunch without deleting and repeat phase A. This shows the on-disk cache
    effect.
 
