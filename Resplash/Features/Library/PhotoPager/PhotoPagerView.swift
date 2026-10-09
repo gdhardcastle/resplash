@@ -1,19 +1,17 @@
 import SwiftUI
 
-/// Full-screen, swipeable carousel over the photos already loaded in the Library.
-/// Knows nothing about the view model: it works on values and reports back through closures.
+/// Full-screen, swipeable pager over the photos a grid view model has loaded: the same data as the
+/// grid, laid out one photo per page. Paging near the end loads the next page, as scrolling does.
 ///
 /// The paging is hand-rolled rather than `TabView(.page)`: that is UIKit-backed and ignores the
 /// SwiftUI transaction, which stops the selected photo flying in from its grid cell.
-struct DetailPagerView: View {
-    
-    let photos: [Photo]
+struct PhotoPagerView: View {
+
+    @ObservedObject var viewModel: PhotoGridViewModel
     @Binding var selection: Photo.ID
     let namespace: Namespace.ID
-    /// True while the selected photo should take part in the grid ↔ carousel flight.
+    /// True while the selected photo should take part in the grid ↔ pager flight.
     let isHeroActive: Bool
-    /// Called when the user pages to a photo, so the owner can load more near the end.
-    let onPhotoShown: (Photo) -> Void
     let onDismiss: () -> Void
 
     @State private var drag: CGSize = .zero
@@ -23,6 +21,10 @@ struct DetailPagerView: View {
 
     private static let dismissDistance: CGFloat = 120
     private static let pageAnimation = Animation.spring(response: 0.35, dampingFraction: 0.85)
+
+    private var photos: [Photo] {
+        viewModel.photos
+    }
 
     private var selectedIndex: Int {
         photos.firstIndex { $0.id == selection } ?? 0
@@ -59,7 +61,7 @@ struct DetailPagerView: View {
         }
         .onChange(of: selection) { id in
             if let photo = photos.first(where: { $0.id == id }) {
-                onPhotoShown(photo)
+                viewModel.photoDidAppear(photo)
             }
         }
     }
@@ -74,7 +76,7 @@ struct DetailPagerView: View {
 
             ZStack {
                 ForEach(Array(visible), id: \.self) { index in
-                    DetailPhotoPage(
+                    PhotoPagerPage(
                         photo: photos[index],
                         namespace: namespace,
                         isHeroSource: isHeroActive && index == current
@@ -110,7 +112,7 @@ struct DetailPagerView: View {
             Spacer()
 
             if photos.indices.contains(selectedIndex) {
-                DetailInfoBar(photo: photos[selectedIndex])
+                PhotoPagerInfoBar(photo: photos[selectedIndex])
             }
         }
     }

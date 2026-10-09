@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Caption and photographer attribution shown over the bottom of the carousel.
-struct DetailInfoBar: View {
+/// Caption and photographer attribution shown over the bottom of the pager.
+struct PhotoPagerInfoBar: View {
     let photo: Photo
 
     var body: some View {

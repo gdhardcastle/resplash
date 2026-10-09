@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One page of the carousel: the photo at its natural aspect ratio, centred on screen.
-struct DetailPhotoPage: View {
+/// One page of the pager: the photo at its natural aspect ratio, centred on screen.
+struct PhotoPagerPage: View {
     let photo: Photo
     let namespace: Namespace.ID
     /// Only joins the shared hero id while opening or closing. At rest (and while paging) the image

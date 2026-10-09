@@ -5,7 +5,7 @@ struct PhotoGridCell: View, Equatable {
     
     let photo: Photo
     let namespace: Namespace.ID
-    /// True while the detail carousel is showing this photo.
+    /// True while the pager is showing this photo.
     let isSelected: Bool
 
     var body: some View {
@@ -30,7 +30,7 @@ struct PhotoGridCell: View, Equatable {
     @ViewBuilder
     private var thumbnail: some View {
         if isSelected {
-            // The carousel owns this photo. Removing the image here and inserting the carousel's
+            // The pager owns this photo. Removing the image here and inserting the pager's
             // image in the same update is what lets SwiftUI fly one into the other.
             placeholder
         } else {

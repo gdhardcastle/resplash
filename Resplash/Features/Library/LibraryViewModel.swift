@@ -7,22 +7,26 @@ import Foundation
 /// its scroll position and no extra requests. Search results get a fresh view model per query.
 @MainActor
 final class LibraryViewModel: ObservableObject {
-    let list: PhotoGridViewModel
-    /// Results for the latest debounced query; `nil` until one has been issued, and again once the
-    /// search is cleared.
-    @Published private(set) var searchResults: PhotoGridViewModel?
+    
+    let listViewModel: PhotoGridViewModel
+    @Published private(set) var searchViewModel: PhotoGridViewModel?
+    
     @Published var query = "" {
         didSet { queryDidChange() }
     }
+    
+    private var searchTask: Task<Void, Never>?
 
     private let repository: PhotoRepository
     private let searchDebounce: Duration
-    private var searchTask: Task<Void, Never>?
 
-    init(repository: PhotoRepository, searchDebounce: Duration = .milliseconds(350)) {
+    init(
+        repository: PhotoRepository,
+        searchDebounce: Duration = .milliseconds(350)
+    ) {
         self.repository = repository
         self.searchDebounce = searchDebounce
-        list = PhotoGridViewModel(source: .list, repository: repository)
+        listViewModel = PhotoGridViewModel(source: .list, repository: repository)
     }
 
     var trimmedQuery: String {
@@ -33,19 +37,19 @@ final class LibraryViewModel: ObservableObject {
         !trimmedQuery.isEmpty
     }
 
-    /// The grid view model whose photos are currently on screen (and in the carousel).
+    /// The grid view model whose photos are currently on screen (and in the pager).
     var activeViewModel: PhotoGridViewModel? {
-        isSearching ? searchResults : list
+        isSearching ? searchViewModel : listViewModel
     }
 
     func start() {
-        list.loadFirstPageIfNeeded()
+        listViewModel.loadFirstPageIfNeeded()
     }
 
     /// Awaits the pending debounce and any load it started. Lets tests wait deterministically.
     func settled() async {
         await searchTask?.value
-        await searchResults?.settled()
+        await searchViewModel?.settled()
     }
 
     /// Debounced: every keystroke cancels the previous pending search, so only a pause in typing
@@ -55,12 +59,12 @@ final class LibraryViewModel: ObservableObject {
         let query = trimmedQuery
 
         guard !query.isEmpty else {
-            searchResults?.cancel()
-            searchResults = nil
+            searchViewModel?.cancel()
+            searchViewModel = nil
             return
         }
         // Back to the query that is already showing: nothing to do.
-        guard searchResults?.source != .search(query) else { return }
+        guard searchViewModel?.source != .search(query) else { return }
 
         searchTask = Task { [weak self, searchDebounce] in
             try? await Task.sleep(for: searchDebounce)
@@ -70,9 +74,9 @@ final class LibraryViewModel: ObservableObject {
     }
 
     private func startSearch(for query: String) {
-        searchResults?.cancel()
+        searchViewModel?.cancel()
         let results = PhotoGridViewModel(source: .search(query), repository: repository)
-        searchResults = results
+        searchViewModel = results
         results.loadFirstPageIfNeeded()
     }
 }

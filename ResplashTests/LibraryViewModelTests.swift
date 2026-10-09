@@ -25,12 +25,12 @@ struct LibraryViewModelTests {
     @Test func startLoadsTheList() async {
         let (viewModel, repository) = makeViewModel()
         viewModel.start()
-        await viewModel.list.settled()
+        await viewModel.listViewModel.settled()
 
-        #expect(viewModel.list.photos.map(\.id) == ["list"])
+        #expect(viewModel.listViewModel.photos.map(\.id) == ["list"])
         #expect(repository.requestedPages == [1])
         #expect(viewModel.isSearching == false)
-        #expect(viewModel.activeViewModel === viewModel.list)
+        #expect(viewModel.activeViewModel === viewModel.listViewModel)
     }
 
     @Test func blankQueryDoesNotSearch() async {
@@ -39,7 +39,7 @@ struct LibraryViewModelTests {
         await viewModel.settled()
 
         #expect(viewModel.isSearching == false)
-        #expect(viewModel.searchResults == nil)
+        #expect(viewModel.searchViewModel == nil)
         #expect(repository.requestedPages.isEmpty)
     }
 
@@ -47,12 +47,12 @@ struct LibraryViewModelTests {
         let (viewModel, _) = makeViewModel()
         viewModel.query = "  fox "
         #expect(viewModel.isSearching)
-        #expect(viewModel.searchResults == nil) // still debouncing
+        #expect(viewModel.searchViewModel == nil) // still debouncing
         await viewModel.settled()
 
-        #expect(viewModel.searchResults?.source == .search("fox"))
-        #expect(viewModel.searchResults?.photos.map(\.id) == ["fox"])
-        #expect(viewModel.activeViewModel === viewModel.searchResults)
+        #expect(viewModel.searchViewModel?.source == .search("fox"))
+        #expect(viewModel.searchViewModel?.photos.map(\.id) == ["fox"])
+        #expect(viewModel.activeViewModel === viewModel.searchViewModel)
     }
 
     @Test func rapidTypingOnlySearchesTheFinalQuery() async {
@@ -62,14 +62,14 @@ struct LibraryViewModelTests {
         viewModel.query = "fox"
         await viewModel.settled()
 
-        #expect(viewModel.searchResults?.photos.map(\.id) == ["fox"])
+        #expect(viewModel.searchViewModel?.photos.map(\.id) == ["fox"])
         #expect(repository.requestedPages == [1]) // one request, for "fox"
     }
 
     @Test func clearingTheQueryDropsResultsAndReturnsToTheList() async {
         let (viewModel, repository) = makeViewModel()
         viewModel.start()
-        await viewModel.list.settled()
+        await viewModel.listViewModel.settled()
         viewModel.query = "fox"
         await viewModel.settled()
         let requestsBeforeClearing = repository.requestedPages.count
@@ -77,10 +77,10 @@ struct LibraryViewModelTests {
         viewModel.query = ""
         await viewModel.settled()
 
-        #expect(viewModel.searchResults == nil)
+        #expect(viewModel.searchViewModel == nil)
         #expect(viewModel.isSearching == false)
-        #expect(viewModel.activeViewModel === viewModel.list)
-        #expect(viewModel.list.photos.map(\.id) == ["list"]) // untouched
+        #expect(viewModel.activeViewModel === viewModel.listViewModel)
+        #expect(viewModel.listViewModel.photos.map(\.id) == ["list"]) // untouched
         #expect(repository.requestedPages.count == requestsBeforeClearing) // clearing costs no request
     }
 
@@ -88,12 +88,12 @@ struct LibraryViewModelTests {
         let (viewModel, repository) = makeViewModel()
         viewModel.query = "fox"
         await viewModel.settled()
-        let first = viewModel.searchResults
+        let first = viewModel.searchViewModel
 
         viewModel.query = "fox "   // same query once trimmed
         await viewModel.settled()
 
-        #expect(viewModel.searchResults === first)
+        #expect(viewModel.searchViewModel === first)
         #expect(repository.requestedPages == [1])
     }
 
@@ -113,7 +113,7 @@ struct LibraryViewModelTests {
         await Task.yield()
         await viewModel.settled()
 
-        #expect(viewModel.searchResults?.source == .search("dog"))
-        #expect(viewModel.searchResults?.photos.map(\.id) == ["dog"])
+        #expect(viewModel.searchViewModel?.source == .search("dog"))
+        #expect(viewModel.searchViewModel?.photos.map(\.id) == ["dog"])
     }
 }
