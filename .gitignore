@@ -33,5 +33,5 @@ fastlane/test_output
 # Secrets
 .env
 
-# Local Unsplash key (see Config/Secrets.example.xcconfig)
-Config/Secrets.xcconfig
+# Local Unsplash key (see Resplash/Config/Secrets.example.xcconfig)
+Resplash/Config/Secrets.xcconfig

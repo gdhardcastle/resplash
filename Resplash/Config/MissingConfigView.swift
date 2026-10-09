@@ -8,7 +8,7 @@ struct MissingConfigView: View {
                 .font(.largeTitle)
             Text("Unsplash Access Key missing")
                 .font(.headline)
-            Text("Copy Config/Secrets.example.xcconfig to Config/Secrets.xcconfig, add your key, then rebuild. See the README for details.")
+            Text("Copy Resplash/Config/Secrets.example.xcconfig to Resplash/Config/Secrets.xcconfig, add your key, then rebuild. See the README for details.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

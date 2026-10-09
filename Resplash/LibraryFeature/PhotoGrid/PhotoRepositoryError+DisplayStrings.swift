@@ -14,7 +14,7 @@ extension PhotoRepositoryError {
     var message: String {
         switch self {
         case .rateLimited: "Unsplash limits how many requests an app can make per hour. Try again later."
-        case .unauthorized: "Check the Unsplash Access Key in Config/Secrets.xcconfig."
+        case .unauthorized: "Check the Unsplash Access Key in Resplash/Config/Secrets.xcconfig."
         case .network: "Check your connection and try again."
         case .server, .invalidResponse: "Please try again."
         }

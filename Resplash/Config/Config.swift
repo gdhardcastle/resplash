@@ -2,6 +2,7 @@ import Foundation
 
 /// Reads environment-specific values injected at build time via xcconfig → Info.plist.
 nonisolated struct Config: Sendable {
+    
     enum Error: Swift.Error, Equatable {
         case missingAccessKey
     }
