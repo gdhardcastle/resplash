@@ -20,14 +20,15 @@ of Apple's guidance is under 5 good, 5 to 10 warning, over 10 critical.
 | Caption fix | Caption animation fixed (`e8dd9c6`) | 41 | 55.7 and 84.4 ms/s | 62 ms | 189 ms/s | 4 combined |
 | 6 | Pager keeps its own page (`242cc75`) | 28 | 40.9 ms/s | 33 ms | 152 ms/s | 1 / 0 |
 | 7 | Grid synced when idle (`15174c9`) | 13 | 35.1 ms/s | 33 ms | not read | 2 / 0 |
-| 8 | Image loader replaces `AsyncImage` (`5fd474e`) | **11** | **24.4 ms/s** | **25 ms** | 144 ms/s | **0 / 0** |
+| 8 | Image loader replaces `AsyncImage` (`5fd474e`) | 11 | 24.4 ms/s | 25 ms | 144 ms/s | 0 / 0 |
+| 9 | Grid scrolled without changing selection (`283ba01`) | **3** | **4.1 ms/s** | **25 ms** | 142 ms/s | **0 / 0** |
 
-Runs 6 to 8 combine both pager sessions into one figure; the first two rows are per session as first
-recorded. Runs 6 to 8 are your run numbers, in `Hitches Time Profiler & SwiftUI.trace` (its own numbers
-for them are 3 to 5).
+Runs 6 to 9 combine both pager sessions into one figure; the first two rows are per session as first
+recorded. Runs 6 to 9 are your run numbers, in `Hitches Time Profiler & SwiftUI.trace` (its own numbers
+for them are 3 to 6).
 
 Caveats: one recording each, swipes done by hand, and the sessions differ in length (6.4 s to 9.5 s of
-paging), so small steps are within noise. Run 6 to run 8 is the only change I would call a trend. The
+paging), so small steps are within noise. Run 6 to run 9 is the only change I would call a trend. The
 grid-scroll phase was not re-measured after run 1.
 
 ### What has been established
@@ -44,18 +45,24 @@ grid-scroll phase was not re-measured after run 1.
 - **The image loader moved the numbers, but the run does not isolate it.** Between runs 7 and 8 the loader
   is the only code change, but the sessions differ and there is no Allocations or Network recording for
   it yet, so no cache hit rate or duplicate count.
+- **Scrolling the grid without touching state took paging under the warning line.** The idle sync was
+  setting `selectedID`, which re-ran `LibraryView` and the grid. A `GridScroller` reference now scrolls the
+  grid directly. Grid updates while paging fell from about 2,150/s to about 490/s, and paging hitches from
+  11 to 3 (24.4 to 4.1 ms/s). Main-thread CPU barely changed (144 to 142 ms/s): the cost was concentrated in
+  the frames where a sync landed, not spread across the session.
 
 ### Open
 
-- **The idle sync probably costs frames.** During paging in run 8 the grid still gets about 2,100 view
-  updates a second (run 6: 28). 5 of the 11 paging hitches fall within 80 ms after a "Grid synced" signpost,
-  which cover 14% of paging time, and 3 more land at the page flip about 450 ms before one. A correlation
-  over 11 hitches, not proof. A sync changes `selectedID` in `LibraryView`, which re-runs the grid body
-  and re-lays out all photos for a change in two cells.
-- **Paging is still late-frame work in SwiftUI:** the main thread is about 144 ms/s busy, 58% of it graph
+- **A sync can still cost a frame.** In run 9 one of the 3 paging hitches (25 ms at 10.42 s) lands 39 ms
+  after a "Grid synced" signpost; the other two do not line up with one. The scroll itself still creates the
+  cells that come into view.
+- **The pager still updates about 3,060 views a second** while paging (`OpacityRendererEffect`,
+  `_MatchedGeometryEffect`, `_ClipEffect`). Run 9 is already under the warning line, so reducing that is
+  optional. The main thread is about 142 ms/s busy, 58% of it graph
   updates, 15% `body` evaluation, 15% Core Animation commit. Our own functions do not show by name in
   Release symbols.
-- **A 37.5 ms hitch about 300 ms after the pager finished closing in run 8** has not been looked at.
+- **A 37.5 ms hitch about 300 ms after the pager finished closing in run 8** was not seen in run 9
+  (one 8 ms hitch outside the pager), so it may have been a one-off. Not investigated.
 - **Failed grid images** (grey photo icon after scrolling back to about photo 100) were seen with
   `AsyncImage`. The loader retries a failed load when the cell reappears; not yet checked on the device.
 
@@ -144,6 +151,23 @@ SwiftUI instrument while paging (76,479 updates, 9,725/s): pager subtree 27,995;
 2,100/s); other, mostly grid-cell `Button` and `ResolvedButtonStyle`, 27,589; both 4,008. The most updated
 views in the pager are `OpacityRendererEffect` (6,419), `_MatchedGeometryEffect` (3,382) and `_ClipEffect`
 (2,864). Main thread while paging is about 144 ms/s busy (run 6: 152).
+
+## Run 9: grid scrolled without changing selection
+
+Code `283ba01`, 22.5 s, two pager sessions.
+
+| Phase | Seconds | Hitches | Hitch time | Worst |
+|---|---|---|---|---|
+| Pager opening | 1.1 | 0 | 0 | 0 |
+| **Paging** | 10.0 | 3 | 4.1 ms/s | 25.0 ms |
+| Pager closing | 1.2 | 0 | 0 | 0 |
+| Outside the pager | n/a | 1 | 8 ms | 8 ms |
+
+SwiftUI instrument while paging, against run 8: 79,681 updates (7,928/s, was 9,725/s). The grid's share
+fell from 16,887 updates (about 2,150/s) to 4,881 (about 490/s), and grid-cell `Button` and
+`ResolvedButtonStyle` no longer appear among the most updated views. The pager subtree is unchanged at
+about 3,060 updates/s, and 1,345/s are classified as touching both the pager and the grid (not
+investigated). Two of the three paging hitches are Instruments' "Potentially expensive app update(s)".
 
 ## Not yet measured
 

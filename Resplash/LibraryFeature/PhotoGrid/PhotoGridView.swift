@@ -10,6 +10,8 @@ struct PhotoGridView: View {
     let namespace: Namespace.ID
     /// The photo currently shown in the pager, if any. Read-only: the grid never owns selection.
     let selectedID: Photo.ID?
+    /// How the Library scrolls this grid to the page the pager has reached.
+    let scroller: GridScroller
     /// Shown when a load succeeds but returns nothing.
     let emptyMessage: String
     let onSelect: (Photo) -> Void
@@ -45,10 +47,7 @@ struct PhotoGridView: View {
 
                 nextPageView(nextPage)
             }
-            // Keep the grid in step with the pager so dismissing lands on the right cell.
-            .onChange(of: selectedID) { id in
-                if let id { proxy.scrollTo(id) }
-            }
+            .onAppear { scroller.scrollTo = { proxy.scrollTo($0) } }
         }
     }
     

@@ -20,6 +20,10 @@ struct LibraryView: View {
     /// fly in from a grid cell.
     @State private var isHeroActive = false
     @State private var heroTask: Task<Void, Never>?
+    /// Scrolls each grid to the pager's page. Reference types that views never read, so using them
+    /// re-evaluates nothing.
+    @State private var listScroller = GridScroller()
+    @State private var searchScroller = GridScroller()
 
     /// One namespace per grid, so a photo that appears in both can never clash in the hero transition.
     @Namespace private var listNamespace
@@ -75,6 +79,7 @@ struct LibraryView: View {
             viewModel: viewModel.listViewModel,
             namespace: listNamespace,
             selectedID: viewModel.isSearching ? nil : selectedID,
+            scroller: listScroller,
             emptyMessage: "No photos",
             onSelect: select
         )
@@ -90,6 +95,7 @@ struct LibraryView: View {
                 viewModel: results,
                 namespace: searchNamespace,
                 selectedID: selectedID,
+                scroller: searchScroller,
                 emptyMessage: "No results for “\(viewModel.trimmedQuery)”",
                 onSelect: select
             )
@@ -99,8 +105,13 @@ struct LibraryView: View {
         }
     }
 
+    private var activeScroller: GridScroller {
+        viewModel.isSearching ? searchScroller : listScroller
+    }
+
     private func select(_ photo: Photo) {
         UIApplication.dismissKeyboard()
+        activeScroller.reset(to: photo.id)
         heroTask?.cancel()
         isHeroActive = true
         probe?.pagerWillOpen()
@@ -114,11 +125,11 @@ struct LibraryView: View {
         }
     }
 
-    /// Brings the grid in line with the page the user has paused on: its cell drops the image and the
-    /// grid scrolls to it. Done at a pause, when nothing on screen is moving, so the cost is invisible.
+    /// Scrolls the grid to the page the user has paused on, so dismissing finds it already in place.
+    /// Only the scroll position moves: `selectedID` is untouched, so no view body re-runs for it. The
+    /// grid's cell only drops its image when the pager is dismissed.
     private func syncGrid(to id: Photo.ID) {
-        guard selectedID != nil, selectedID != id else { return }
-        selectedID = id
+        guard selectedID != nil, activeScroller.scroll(to: id) else { return }
         probe?.gridDidSync()
     }
 
@@ -129,9 +140,11 @@ struct LibraryView: View {
         probe?.pagerWillClose()
         heroTask = Task {
             // Rejoin the hero id first, in its own update, so the flight back has a matching pair. The
-            // grid has not heard about any page changes, so it learns of the current photo now: its cell
-            // drops the image and the grid scrolls to it, before the flight back starts.
+            // grid's cell for the current photo drops its image now, before the flight back starts. The
+            // grid is usually already scrolled there; if the user dismissed straight after a swipe, it
+            // scrolls now.
             isHeroActive = true
+            activeScroller.scroll(to: currentID)
             selectedID = currentID
             try? await Task.sleep(for: .milliseconds(60))
             guard !Task.isCancelled else { return }
