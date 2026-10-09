@@ -78,7 +78,8 @@ One trace per template, each running the full script.
 
 ## 3. Results
 
-One column per run.
+Measured results are recorded in [PROFILING_RESULTS.md](PROFILING_RESULTS.md). The sheet below is the
+blank template, one column per run.
 
 | Metric | Baseline (cold) | Baseline (warm) | Pipeline (cold) | Pipeline (warm) |
 |---|---|---|---|---|
