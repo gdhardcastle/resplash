@@ -96,57 +96,78 @@ Caveats: Simulator, one run, and URLs are redacted in the log, so per-URL duplic
 counted; the figures are request totals. The scroll steps were driven by hand-scripted swipes, so
 "photos on screen" comes from the HUD, not a controlled script.
 
-### Animation Hitches and Time Profiler (device, whole run)
+### Hitches, Time Profiler and SwiftUI, per phase (device)
 
 | | |
 |---|---|
 | Device | iPhone 13 Pro, iOS 26.7, launched with `-ProfilingHUD` |
-| Run | One run, 60.1 s, Animation Hitches template with Time Profiler (1 ms sampling) |
-| Not in this trace | **Points of Interest signposts** (the template does not include them, so the phases cannot be isolated) and the **SwiftUI instrument** |
+| Run | One run, 57.2 s: Animation Hitches with Time Profiler, SwiftUI and Points of Interest |
+| Phases (from the signposts) | 500 loaded at 17.7 s (517 photos, 36 page loads). Pager #1 open 32.2 to 41.5 s, pager #2 open 45.1 to 54.6 s. Each pager has an opening flight (about 0.6 s), a paging period (about 8 s) and a closing flight (about 0.6 s). |
+
+An earlier recording made without signposts showed the same pattern (3 hitches in the first 48 s, then 19 in a burst); this one explains it.
 
 **Hitches**
 
-| Window | Hitches | Total | Hitch time ratio | Worst |
-|---|---|---|---|---|
-| Whole run (60.1 s) | 22 | 495.9 ms | **8.25 ms/s** | 50.0 ms |
-| 0 to 48 s | 3 | 37.5 ms | 0.78 ms/s | 12.5 ms |
-| 48 to 58 s | 19 | 458.4 ms | 45.84 ms/s | 50.0 ms |
+| Phase | Seconds | Hitches | Total | Hitch time ratio | Worst |
+|---|---|---|---|---|---|
+| Grid (everything outside the pager) | 38.4 | 5 | 62.5 ms | **1.63 ms/s** | 16.7 ms |
+| Pager opening (x2) | 1.2 | 0 | 0 | 0 | 0 |
+| **Paging in the pager #1** | 8.1 | 17 | 545.9 ms | **67.4 ms/s** | 66.7 ms |
+| **Paging in the pager #2** | 8.4 | 15 | 450.0 ms | **53.8 ms/s** | 75.0 ms |
+| Pager closing (x2) | 1.2 | 1 | 16.7 ms | 13.9 ms/s | 16.7 ms |
+| Whole run | 57.2 | 38 | 1075.1 ms | **18.8 ms/s** | 75.0 ms |
 
-Almost all of the hitching is in one burst. The first 48 s, which must be the grid scrolling, had three
-12.5 ms hitches. From 48 s there are 19, up to 50 ms. Instruments flags most of the burst as
-"Potentially expensive app update(s)". My recollection of Apple's guidance is under 5 ms/s good, 5 to
-10 warning, over 10 critical, which puts the whole run at warning and the burst well into critical.
-The window boundary was read off the hitch timestamps, not from markers.
+My recollection of Apple's guidance is under 5 ms/s good, 5 to 10 warning, over 10 critical. The grid is
+well inside good. The open and close flights are clean. All of the damage is in paging, at five to
+thirteen times the critical line, and it repeats in both pager sessions.
 
-**Time Profiler (1 ms samples)**
+**Time Profiler (1 ms samples, share of main-thread samples with the pattern in the stack)**
 
-| | Whole run | 0 to 48 s | 48 to 58 s |
-|---|---|---|---|
-| Main-thread CPU | 15.7 s (261 ms per second) | 13.0 s | 2.7 s |
-| Main thread: image decode (ImageIO / JPEG frames in the stack) | 0.6% | 0.1% | 3.2% |
-| Main thread: SwiftUI offscreen CPU rendering | 7.0% | 0.0% | **41.4%** |
-| Main thread: SwiftUI graph update (`AG::`) | 53.5% | 55.7% | 43.3% |
-| Background threads: image decode | 52.4% | 54.3% | 36.0% |
+| Phase | Main-thread CPU | Offscreen CPU rendering | `CGDrawingLayer` draw | SwiftUI graph update | Image decode | Text glyph drawing |
+|---|---|---|---|---|---|---|
+| Grid | 214 ms/s | 0.0% | 1.2% | 48.2% | 0.0% | 3.1% |
+| Pager opening | 257 ms/s | 0.0% | 0.3% | 62.7% | 0.0% | 1.3% |
+| **Paging** | 294 ms/s | **43.6%** | **46.2%** | 37.6% | 0.0% | 12.8% |
+| Pager closing | 314 ms/s | 0.0% | 0.0% | 65.0% | 0.0% | 0.0% |
 
-- **Image decoding is not on the main thread.** It is about 0.6% of main-thread samples. It happens on
-  background threads (about 3.6 s of CPU, more than half of all background work), which fits `AsyncImage`
-  decoding off the main thread. So the 971 decodes cost CPU and energy but are not what drops frames.
-- **The hitch burst is SwiftUI's CPU renderer.** In that window 41% of main-thread samples are in
-  `RB::DisplayList::Layer::make_cgimage` into `CGContextEndTransparencyLayer` and
-  `RIPLayerBltImage`, with `argb32_image_mark_argb32` and vImage blends as the top self frames: offscreen
-  layers being rasterised on the CPU. That is about 1.1 s of the window's 2.7 s.
-- **What was happening at 48 s is not recorded.** My reading is that the burst is the pager (the end of
-  the run's sequence, and a view with an opacity transition, materials and a scale effect), but this is
-  an inference. It needs the `Pager open` intervals to confirm.
+Image decoding never runs on the main thread. It is about half of all background-thread CPU (5.9 s in
+this run), which fits `AsyncImage` decoding off the main thread.
+
+**SwiftUI instrument**
+
+- The main thread's time while paging is rendering, not body evaluation: all View Body Updates in the
+  paging phases cost 395 ms in total, against 4.8 s of main-thread CPU.
+- `PhotoPagerView` body updates: 210 while paging (48 ms in total). `PhotoGridView`, `MasonryColumns`
+  and `LibraryView` each re-evaluate 22 times while paging, so the grid underneath the pager is being
+  invalidated on page changes.
+- `AnimatableAttribute<OpacityRendererEffect>` updates: 4,241 while paging, none worth listing in the
+  grid. About 6,000 interpolated styled-text display lists while paging.
+- **`PhotoGridCell` body updates: 91 recorded during the whole grid scroll.** I do not trust this count,
+  because about 517 photos went by and every cell evaluates its body at least once when it appears. The
+  instrument evidently did not record them all. It is not usable as the "cell body updates per page"
+  baseline.
+
+**Reading**
+
+- **The hitches are not caused by image loading.** They occur only while swiping inside the pager, and
+  decoding is off the main thread throughout. The image pipeline is therefore unlikely to move the
+  hitch figures, and the README should not claim that it does.
+- **The cause is CPU rendering in SwiftUI.** While paging, 44% of main-thread time is a
+  `CGDrawingLayer` redrawing on the CPU: a transparency layer, a colour-matrix filter and text glyphs
+  (`RB::DisplayList::Layer::make_cgimage` into `CGContextEndTransparencyLayer`).
+- **Which view's layer that is has not been isolated.** Two candidates fit the data:
+  1. The pager's chrome: a group `.opacity` over two `.ultraThinMaterial` backgrounds, with caption
+     text that changes on every page.
+  2. The grid underneath the pager: it is wrapped in an always-applied `.opacity`, and it is changed on
+     every page flip (the selected cell flips, and the grid scrolls to it).
+  Open and close change the selection once and stay clean, so a per-flip change fits both.
 
 ### Not yet measured
 
 - [ ] Network instrument on the device (per-URL duplicates), if it can be made to stop crashing.
 - [ ] Values at each milestone (select 0 s to the signpost in Instruments and read Statistics).
-- [ ] SwiftUI instrument: `PhotoGridCell` body updates per page (was not in the hitches trace).
-- [ ] Hitches and Time Profiler **per phase**: re-record with Points of Interest added so the pager can be isolated.
+- [ ] A trustworthy `PhotoGridCell` body-update count (the SwiftUI instrument recorded 91 for the whole grid scroll, which cannot be complete).
 - [ ] Warm run (relaunch without deleting the app).
-- [ ] Pager phase (now marked in the trace by the `Pager open` / `opening` / `closing` intervals).
 
 ## Pipeline
 
