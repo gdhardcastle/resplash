@@ -44,26 +44,26 @@ Views → ViewModels → PhotoDomain (Photo, PhotoRepository) ← PhotoData (API
 
 ## Performance
 
-Measured with Instruments on an iPhone 13 Pro (120 Hz, Release build): Animation Hitches, Time Profiler, SwiftUI and Allocations. Each recording scrolled to about 500 photos, back to photo 100, then opened the pager and swiped through it. The plain-`AsyncImage` baseline is the same code before the image pipeline.
+Measured with Instruments on an iPhone 13 Pro (120 Hz), Release build: scroll to about 500 photos, back to photo 100, then open the pager and swipe through it. **Baseline** is plain `AsyncImage`.
 
-| | `AsyncImage` baseline | Final |
+**Result:** paging hitch time fell from about 60 to 4 ms/s, decoded-image memory is capped, and each photo is downloaded once (except cancelled loads that restart), at the cost of about three times the baseline's memory.
+
+| Criterion | Result | Evidence |
 |---|---|---|
-| Hitch time while paging in the pager | 67 and 54 ms/s (two sessions) | **4 ms/s** |
-| Main-thread CPU rendering while paging | 44% of samples | **0%** |
-| Hitch time scrolling the grid | 1.6 ms/s | not re-measured |
-| Image decodes for 506 photos (scroll to 500 and back) | 971 | 869 cold, 894 warm |
-| App memory at the end | 46 MiB | 134 to 139 MiB |
-| Downloads, cold start | not counted on device | 563 for 494 URLs |
-| Downloads, warm start (disk cache) | not counted on device | 0 |
+| After several hundred images | Decoded-image memory is capped by design; app memory was 134 and 139 MiB at the end of two runs of 506 photos (baseline 46 MiB) | Allocations and VM Tracker; cache limit 100 MB |
+| Efficient loading, no duplicated work | Warm start downloads nothing; cold start about 1.14 downloads per photo; decodes 869 and 894 (baseline 971) | The loader's counters: 563 downloads for 494 URLs, the extra 12% being cancelled loads that restarted |
+| Unnecessary SwiftUI updates | Grid updates while paging about 3,400/s before the pager owned its page, about 500/s now; paging hitch time 67 and 54 → 4 ms/s | SwiftUI instrument and Animation Hitches |
+| CPU and memory in Instruments | CPU rendering while paging 44% → 0%; main-thread CPU while paging 294 → 142 ms/s | Time Profiler; Allocations and VM Tracker |
 
-What the profiling found, in the order it was fixed:
+| Problem found | Fix | Effect |
+|---|---|---|
+| Caption text animated on every page and was drawn on the CPU | No animation on that bar | CPU rendering 44% → 0% |
+| Every page flip re-evaluated the grid under the pager | The pager owns its current page | Hitch time 56 and 84 → 41 ms/s |
+| Syncing the grid through `@State` re-ran the whole screen | Scroll it through a plain reference | 24 → 4 ms/s |
 
-1. **The caption bar's text animated on every page change** and was drawn on the CPU. One modifier removed the CPU rendering; the hitches stayed.
-2. **Every page flip re-evaluated the grid underneath the pager**, because the selection lived in the screen. Keeping the page inside the pager cut paging hitch time from 56 and 84 ms/s (two sessions) to 41.
-3. **Syncing the grid by changing `@State` re-ran the whole screen.** Scrolling it directly through a small reference type took paging from 24 to 4 ms/s. Grid updates while paging fell from about 2,150 to 490 a second.
-4. **The image loader** landed between a 35 and a 24 ms/s recording, but those runs differ in length, so its effect on hitches is not isolated. Decoding was already off the main thread. What it adds is de-duplication, cancellation, a disk cache and the counters.
+**Trade-off:** the 100 MB memory cache holds about 140 thumbnails, and the scroll back from 500 to 100 passes about 400, so roughly 60% of that trip is decoded again from disk. I chose bounded memory over fewer decodes: decoding is off the main thread and did not cause late frames, while memory growth risks the app being killed in the background.
 
-The memory cache is bounded at 100 MB, about 140 thumbnails. The scroll back from 500 to 100 passes about 400, so roughly 60% of that trip is decoded again from disk. I chose bounded memory over fewer decodes: decoding is off the main thread and did not cause late frames, while memory growth risks the app being killed in the background.
+**Not shown:** the loader's effect on hitches (it landed in a recording of a different length), and a Time Profiler comparison of the grid scroll. Each figure is from one recording, with the scrolling done by hand.
 
 ## Tests
 
