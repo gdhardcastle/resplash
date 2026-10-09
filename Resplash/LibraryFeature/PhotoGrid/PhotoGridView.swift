@@ -4,6 +4,7 @@ import SwiftUI
 struct PhotoGridView: View {
 
     @ObservedObject var viewModel: PhotoGridViewModel
+    @Environment(\.profilingProbe) private var probe
     
     let namespace: Namespace.ID
     /// The photo currently shown in the pager, if any. Read-only: the grid never owns selection.
@@ -34,7 +35,10 @@ struct PhotoGridView: View {
                             .equatable()
                     }
                     .buttonStyle(.plain)
-                    .onAppear { viewModel.photoDidAppear(photo) }
+                    .onAppear {
+                        viewModel.photoDidAppear(photo)
+                        probe?.cellAppeared(photo, in: photos)
+                    }
                 }
 
                 nextPageView(nextPage)
