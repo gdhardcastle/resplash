@@ -5,7 +5,9 @@ struct PhotoPagerPage: View {
     let photo: Photo
     let namespace: Namespace.ID
     /// Only joins the shared hero id while opening or closing. At rest (and while paging) the image
-    /// gets a throwaway id, so swiping never makes it fly in from a grid cell.
+    /// gets a throwaway id, so swiping never makes it fly in from a grid cell, and tracks no geometry
+    /// at all: a page that is being dragged moves every frame, and tracking its frame cost SwiftUI
+    /// dozens of attribute updates per frame for nothing.
     let isHeroSource: Bool
 
     var body: some View {
@@ -20,7 +22,11 @@ struct PhotoPagerPage: View {
                 }
             }
             .clipped()
-            .matchedGeometryEffect(id: isHeroSource ? photo.id : "\(photo.id)-detached", in: namespace)
+            .matchedGeometryEffect(
+                id: isHeroSource ? photo.id : "\(photo.id)-detached",
+                in: namespace,
+                properties: isHeroSource ? .frame : []
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityLabel(photo.caption)
     }

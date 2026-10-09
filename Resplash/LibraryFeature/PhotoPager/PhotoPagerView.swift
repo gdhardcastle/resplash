@@ -8,12 +8,20 @@ import SwiftUI
 struct PhotoPagerView: View {
 
     @ObservedObject var viewModel: PhotoGridViewModel
-    @Binding var selection: Photo.ID
     let namespace: Namespace.ID
     /// True while the selected photo should take part in the grid ↔ pager flight.
     let isHeroActive: Bool
-    let onDismiss: () -> Void
+    /// Called with the photo being shown when the pager is dismissed, so the grid can catch up.
+    let onDismiss: (Photo.ID) -> Void
+    /// Called with the photo being shown once the user has paused on it, so the grid can catch up in a
+    /// quiet moment instead of at dismissal, where its cost was a visible stick before the flight back.
+    let onSettle: (Photo.ID) -> Void
 
+    /// The page being shown. Owned here, not by the Library: a page flip then re-evaluates only the
+    /// pager. Reporting every flip to the Library made it re-evaluate and scroll the whole grid
+    /// underneath, inside the frame that finishes the swipe, and that was the cause of the hitches.
+    @State private var selection: Photo.ID
+    @State private var settleTask: Task<Void, Never>?
     @State private var drag: CGSize = .zero
     @State private var dragAxis: Axis?
     /// Fades in on its own so the flying photo is visible from the first frame of the transition.
@@ -21,6 +29,23 @@ struct PhotoPagerView: View {
 
     private static let dismissDistance: CGFloat = 120
     private static let pageAnimation = Animation.spring(response: 0.35, dampingFraction: 0.85)
+    private static let settleDelay = Duration.milliseconds(450)
+
+    init(
+        viewModel: PhotoGridViewModel,
+        initialID: Photo.ID,
+        namespace: Namespace.ID,
+        isHeroActive: Bool,
+        onDismiss: @escaping (Photo.ID) -> Void,
+        onSettle: @escaping (Photo.ID) -> Void
+    ) {
+        self.viewModel = viewModel
+        self.namespace = namespace
+        self.isHeroActive = isHeroActive
+        self.onDismiss = onDismiss
+        self.onSettle = onSettle
+        _selection = State(initialValue: initialID)
+    }
 
     private var photos: [Photo] {
         viewModel.photos
@@ -63,7 +88,15 @@ struct PhotoPagerView: View {
             if let photo = photos.first(where: { $0.id == id }) {
                 viewModel.photoDidAppear(photo)
             }
+            // Restart the pause timer on every page change; it fires only if the user stays put.
+            settleTask?.cancel()
+            settleTask = Task {
+                try? await Task.sleep(for: Self.settleDelay)
+                guard !Task.isCancelled, dragAxis == nil else { return }
+                onSettle(id)
+            }
         }
+        .onDisappear { settleTask?.cancel() }
     }
 
     private var pager: some View {
@@ -98,7 +131,7 @@ struct PhotoPagerView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button(action: onDismiss) {
+                Button { onDismiss(selection) } label: {
                     Image(systemName: "xmark")
                         .font(.body.weight(.semibold))
                         .padding(10)
@@ -133,7 +166,7 @@ struct PhotoPagerView: View {
                 let axis = dragAxis
                 if axis == .vertical, abs(value.translation.height) > Self.dismissDistance {
                     // Leave the photo where it was dragged; the flight back starts from there.
-                    onDismiss()
+                    onDismiss(selection)
                     return
                 }
                 let step = axis == .horizontal

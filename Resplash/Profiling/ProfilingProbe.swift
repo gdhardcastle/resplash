@@ -81,6 +81,11 @@ final class ProfilingProbe {
         closingInterval = signposter.beginInterval("Pager closing")
     }
 
+    /// The grid was brought in line with the page the pager paused on.
+    func gridDidSync() {
+        signposter.emitEvent("Grid synced")
+    }
+
     /// The closing flight has landed and the pager is gone.
     func pagerDidClose() {
         if let state = closingInterval {
