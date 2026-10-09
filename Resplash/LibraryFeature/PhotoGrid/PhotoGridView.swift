@@ -4,7 +4,6 @@ import SwiftUI
 struct PhotoGridView: View {
 
     @ObservedObject var viewModel: PhotoGridViewModel
-    @Environment(\.profilingProbe) private var probe
     @Environment(\.imageLoader) private var imageLoader
     
     let namespace: Namespace.ID
@@ -40,7 +39,6 @@ struct PhotoGridView: View {
                     .buttonStyle(.plain)
                     .onAppear {
                         viewModel.photoDidAppear(photo)
-                        probe?.cellAppeared(photo, in: photos)
                         prefetchThumbnails(after: photo, in: photos)
                     }
                 }

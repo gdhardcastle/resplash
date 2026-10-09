@@ -3,11 +3,19 @@ import UIKit
 
 nonisolated protocol ImageLoading: Sendable {
     /// The decoded image if it is already in memory. Synchronous, so a view can draw it on its first frame.
-    func cachedImage(for request: ImageRequest) -> UIImage?
+    /// `countingAsHit` is for a view asking because it needs the image, not for one redrawing what it has:
+    /// `body` can run many times for a single request.
+    func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage?
     func image(for request: ImageRequest) async throws -> UIImage
     /// Quietly loads these ahead of need. Each call replaces the previous window: requests no longer in
     /// it are cancelled, so scrolling fast doesn't leave a queue of downloads nobody will see.
     func prefetch(_ requests: [ImageRequest])
+}
+
+extension ImageLoading {
+    nonisolated func cachedImage(for request: ImageRequest) -> UIImage? {
+        cachedImage(for: request, countingAsHit: false)
+    }
 }
 
 nonisolated enum ImageLoadError: Error {
@@ -35,8 +43,12 @@ actor ImageLoader: ImageLoading {
     private var inFlight: [ImageRequest: InFlight] = [:]
     private var prefetching: [ImageRequest: Task<Void, Never>] = [:]
 
-    /// Lets a trace show every download, so duplicates are countable by URL.
-    private let signposter = OSSignposter(subsystem: "com.georgehardcastle.Resplash", category: "ImagePipeline")
+    nonisolated let stats = ImagePipelineStats()
+
+    /// Marks each download as an interval carrying its URL, so duplicates are countable per URL.
+    private let signposter = OSSignposter(
+        logHandle: OSLog(subsystem: "com.georgehardcastle.Resplash", category: .pointsOfInterest)
+    )
 
     init(http: HTTPClient, memory: MemoryImageCache, disk: DiskImageCache) {
         self.http = http
@@ -60,14 +72,25 @@ actor ImageLoader: ImageLoading {
 
     // MARK: ImageLoading
 
-    nonisolated func cachedImage(for request: ImageRequest) -> UIImage? {
-        memory.image(for: request)
+    nonisolated func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage? {
+        let image = memory.image(for: request)
+        if image != nil, countingAsHit { stats.record(.memoryHit) }
+        return image
     }
 
     func image(for request: ImageRequest) async throws -> UIImage {
-        if let cached = memory.image(for: request) { return cached }
+        try await image(for: request, isPrefetch: false)
+    }
 
-        let (id, task) = join(request)
+    /// A prefetch is not a request for the screen, so it does not count as a hit or a join: the loads it
+    /// causes still show up as disk hits, downloads and decodes.
+    private func image(for request: ImageRequest, isPrefetch: Bool) async throws -> UIImage {
+        if let cached = memory.image(for: request) {
+            if !isPrefetch { stats.record(.memoryHit) }
+            return cached
+        }
+
+        let (id, task) = join(request, isPrefetch: isPrefetch)
         defer { finish(request, id: id) }
         return try await withTaskCancellationHandler {
             try await task.value
@@ -82,12 +105,14 @@ actor ImageLoader: ImageLoading {
 
     // MARK: In-flight bookkeeping
 
-    private func join(_ request: ImageRequest) -> (id: UUID, task: Task<UIImage, Error>) {
+    private func join(_ request: ImageRequest, isPrefetch: Bool) -> (id: UUID, task: Task<UIImage, Error>) {
         if var existing = inFlight[request] {
+            if !isPrefetch { stats.record(.joined) }
             existing.waiters += 1
             inFlight[request] = existing
             return (existing.id, existing.task)
         }
+        if isPrefetch { stats.record(.prefetchStarted) }
         let entry = InFlight(task: Task { try await self.load(request) })
         inFlight[request] = entry
         return (entry.id, entry.task)
@@ -99,6 +124,7 @@ actor ImageLoader: ImageLoading {
         guard var entry = inFlight[request], entry.id == id else { return }
         entry.waiters -= 1
         if entry.waiters == 0 {
+            stats.record(.cancelledLoad)
             entry.task.cancel()
             inFlight[request] = nil
         } else {
@@ -114,9 +140,20 @@ actor ImageLoader: ImageLoading {
     // MARK: Loading
 
     private func load(_ request: ImageRequest) async throws -> UIImage {
+        do {
+            return try await loadUncounted(request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            stats.record(.failure)
+            throw error
+        }
+    }
+
+    private func loadUncounted(_ request: ImageRequest) async throws -> UIImage {
         if let data = await disk.data(for: request.url) {
-            if let image = await ImageDownsampler.image(from: data, maxPixelSize: request.maxPixelSize) {
-                memory.insert(image, for: request)
+            if let image = await decode(data, for: request) {
+                stats.record(.diskHit)
                 return image
             }
             // A truncated or corrupt file would otherwise fail forever.
@@ -125,15 +162,25 @@ actor ImageLoader: ImageLoading {
 
         let data = try await download(request.url)
         try Task.checkCancellation()
-        guard let image = await ImageDownsampler.image(from: data, maxPixelSize: request.maxPixelSize) else {
+        guard let image = await decode(data, for: request) else {
             throw ImageLoadError.undecodable
         }
         await disk.store(data, for: request.url)
+        return image
+    }
+
+    /// Decodes, downsampled and off the main thread, and puts the result in the memory cache.
+    private func decode(_ data: Data, for request: ImageRequest) async -> UIImage? {
+        guard let image = await ImageDownsampler.image(from: data, maxPixelSize: request.maxPixelSize) else {
+            return nil
+        }
+        stats.record(.decode)
         memory.insert(image, for: request)
         return image
     }
 
     private func download(_ url: URL) async throws -> Data {
+        stats.record(.download)
         let interval = signposter.beginInterval("Image download", "\(url.absoluteString, privacy: .public)")
         defer { signposter.endInterval("Image download", interval) }
 
@@ -154,7 +201,7 @@ actor ImageLoader: ImageLoading {
         }
         for request in requests where prefetching[request] == nil && memory.image(for: request) == nil {
             prefetching[request] = Task(priority: .utility) {
-                _ = try? await self.image(for: request)
+                _ = try? await self.image(for: request, isPrefetch: true)
                 self.prefetchDidFinish(request)
             }
         }

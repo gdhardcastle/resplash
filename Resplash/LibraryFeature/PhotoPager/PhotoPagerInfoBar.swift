@@ -18,8 +18,8 @@ struct PhotoPagerInfoBar: View {
         .padding(.vertical, 12)
         .background(.ultraThinMaterial)
         // The caption changes on every page, inside the pager's paging animation. Left to animate,
-        // SwiftUI interpolates the old and new text each frame and redraws the bar on the CPU: about
-        // 40% of main-thread time while paging, and every hitch in the profile. It should just change.
+        // SwiftUI interpolates the old and new text each frame and redraws the bar on the CPU. It should
+        // just change.
         .transaction { $0.animation = nil }
     }
 

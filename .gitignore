@@ -36,5 +36,8 @@ fastlane/test_output
 # Local Unsplash key (see Resplash/Config/Secrets.example.xcconfig)
 Resplash/Config/Secrets.xcconfig
 
-# Instruments traces (see docs/PROFILING.md)
+# Instruments traces
 *.trace
+
+# Local planning notes
+PLAN.md

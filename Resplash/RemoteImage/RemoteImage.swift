@@ -39,7 +39,7 @@ struct RemoteImage<Content: View>: View {
 
     private func load() async {
         failed = false
-        guard loader.cachedImage(for: request) == nil else { return }
+        guard loader.cachedImage(for: request, countingAsHit: true) == nil else { return }
         do {
             loaded = try await loader.image(for: request)
         } catch {

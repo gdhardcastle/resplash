@@ -19,7 +19,7 @@ struct PhotoPagerView: View {
 
     /// The page being shown. Owned here, not by the Library: a page flip then re-evaluates only the
     /// pager. Reporting every flip to the Library made it re-evaluate and scroll the whole grid
-    /// underneath, inside the frame that finishes the swipe, and that was the cause of the hitches.
+    /// underneath, inside the frame that finishes the swipe.
     @Environment(\.imageLoader) private var imageLoader
     @State private var selection: Photo.ID
     @State private var settleTask: Task<Void, Never>?

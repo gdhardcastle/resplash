@@ -8,8 +8,6 @@ struct LibraryView: View {
     private static let heroAnimation = Animation.timingCurve(0.25, 0.8, 0.25, 1, duration: heroDuration)
 
     @StateObject private var viewModel: LibraryViewModel
-    /// Only exists when launched with `-ProfilingHUD`; see `ProfilingProbe`.
-    @State private var probe = ProfilingProbe.makeIfEnabled()
 
     /// The photo open in the pager. `nil` means the grid is showing. It is set when the pager opens
     /// and again when it is dismissed, but not on page flips: the pager keeps its own current page, so
@@ -67,10 +65,6 @@ struct LibraryView: View {
                 .zIndex(1)
             }
         }
-        .environment(\.profilingProbe, probe)
-        .overlay(alignment: .topLeading) {
-            if let probe { ProfilingHUDView(probe: probe) }
-        }
         .task { viewModel.start() }
     }
     
@@ -114,14 +108,12 @@ struct LibraryView: View {
         activeScroller.reset(to: photo.id)
         heroTask?.cancel()
         isHeroActive = true
-        probe?.pagerWillOpen()
         withAnimation(Self.heroAnimation) { selectedID = photo.id }
         // Once the flight lands, detach the page from the grid so paging can't trigger another one.
         heroTask = Task {
             try? await Task.sleep(for: .seconds(Self.heroDuration + 0.1))
             guard !Task.isCancelled else { return }
             isHeroActive = false
-            probe?.pagerDidFinishOpening()
         }
     }
 
@@ -129,15 +121,14 @@ struct LibraryView: View {
     /// Only the scroll position moves: `selectedID` is untouched, so no view body re-runs for it. The
     /// grid's cell only drops its image when the pager is dismissed.
     private func syncGrid(to id: Photo.ID) {
-        guard selectedID != nil, activeScroller.scroll(to: id) else { return }
-        probe?.gridDidSync()
+        guard selectedID != nil else { return }
+        activeScroller.scroll(to: id)
     }
 
     /// `currentID` is the photo the pager is showing, which may differ from the one it opened on.
     /// Usually the grid is already there; if the user dismissed straight after a swipe it catches up now.
     private func dismissPager(at currentID: Photo.ID) {
         heroTask?.cancel()
-        probe?.pagerWillClose()
         heroTask = Task {
             // Rejoin the hero id first, in its own update, so the flight back has a matching pair. The
             // grid's cell for the current photo drops its image now, before the flight back starts. The
@@ -149,12 +140,6 @@ struct LibraryView: View {
             try? await Task.sleep(for: .milliseconds(60))
             guard !Task.isCancelled else { return }
             withAnimation(Self.heroAnimation) { selectedID = nil }
-            // Profiling only: wait for the flight back to land so the marker covers all of it.
-            if let probe {
-                try? await Task.sleep(for: .seconds(Self.heroDuration + 0.1))
-                guard !Task.isCancelled else { return }
-                probe.pagerDidClose()
-            }
         }
     }
 }
