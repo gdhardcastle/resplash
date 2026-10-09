@@ -76,6 +76,17 @@ One trace per template, each running the full script.
 | **Time Profiler** | % of main-thread time in image decoding (ImageIO, CGImageSource) | Select the main thread, invert the call tree, hide system libraries. |
 | **SwiftUI** | `PhotoGridCell` body updates per page load | The SwiftUI instrument's view body updates, filtered by cell type. |
 
+### If the Network instrument crashes
+
+Use `scripts/count-image-requests.sh` on the Simulator. It launches the app with CFNetwork diagnostics
+on and prints running totals of image requests, split into network loads and cache hits. Delete the app
+first for a cold run: `URLCache` persists on disk between launches, so a relaunch is served almost
+entirely from cache.
+
+It cannot run on a device, and URLs are redacted in the system log, so it counts requests but cannot
+say which URLs repeat. The app cannot count them itself: `AsyncImage`'s downloads bypass both a
+registered `URLProtocol` and a replaced `URLCache.shared` (tried; the count stayed at 0).
+
 ## 3. Results
 
 Measured results are recorded in [PROFILING_RESULTS.md](PROFILING_RESULTS.md). The sheet below is the

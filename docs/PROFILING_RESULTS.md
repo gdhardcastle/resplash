@@ -70,10 +70,35 @@ These are totals for the whole 52.6 s recording, not values at a milestone.
   allocated bytes, main-thread decode time and hitches. The README should frame it as a bounded memory
   trade for far fewer decodes.
 
+### Network, from the Simulator (CFNetwork log, not Instruments)
+
+The Network instrument kept crashing, so request counts were taken with
+`scripts/count-image-requests.sh`-style CFNetwork diagnostics on an iPhone 18 Pro **Simulator**
+(not the iPhone 13 Pro above), fresh install, one run, same `AsyncImage` code. Different device, so
+compare the shape, not the absolute numbers, with the Allocations run.
+
+| Step | Photos on screen | Image requests (cumulative) | From network | From `URLCache` |
+|---|---|---|---|---|
+| Launch (first page) | 1 to 7 visible | 7 | 7 | 0 |
+| Scrolled down to photo 159 (171 loaded) | 159 | 159 | 159 | 0 |
+| Scrolled back up to photo 76 | 76 | 296 | 163 | 133 |
+
+- **Going down, one request per photo:** 159 requests for 159 photos, none repeated.
+- **Coming back, 137 more requests for about 83 photos** (about 1.65 per photo). 133 of them were
+  answered by `URLCache`, 4 went to the network. So the download is mostly not repeated, but the app
+  asks again each time a cell reappears.
+- **This supports the Allocations reading:** `URLCache` is absorbing the downloads, and the decoding is
+  what repeats. The Instruments run showed 971 decodes for 504 photos.
+- A relaunch without deleting the app was served entirely from `URLCache` (7 of 7 on the first page),
+  so a cold run must start from a fresh install.
+
+Caveats: Simulator, one run, and URLs are redacted in the log, so per-URL duplicates could not be
+counted; the figures are request totals. The scroll steps were driven by hand-scripted swipes, so
+"photos on screen" comes from the HUD, not a controlled script.
+
 ### Not yet measured
 
-- [ ] **Network:** total image requests, unique URLs, duplicate count (to confirm the repeat-decoding
-  reading above). The Network instrument has been crashing; to be retried with a launched recording.
+- [ ] Network instrument on the device (per-URL duplicates), if it can be made to stop crashing.
 - [ ] Values at each milestone (select 0 s to the signpost in Instruments and read Statistics).
 - [ ] Animation Hitches and hitch time ratio.
 - [ ] Time Profiler: share of main-thread time spent decoding.
