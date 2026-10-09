@@ -71,7 +71,7 @@ Unit tests cover the mapper and its fallbacks, the repository's error and rate-l
 
 ## Assumptions and limitations
 
-- **The access key ships in the app bundle, so it is not secret.** A production app would proxy through a backend.
+- **The access key is kept out of git, but it is not secret.** `Secrets.xcconfig` is gitignored and not in the app target, but its value is substituted into `Info.plist` at build time, so it ships in the app bundle. A production app would proxy through a backend.
 - **Rate limit:** demo keys are limited per hour. The app shows a rate-limit state on a 403 with no remaining requests; that is covered by unit tests but not exercised against the live limit.
 - **No offline mode.** Images are disk-cached, but the feed is not persisted, so a cold start without a network shows the error state.
 - **Cancellation costs some downloads:** in the cold run 69 URLs were downloaded twice, about 12% extra, apparently loads cancelled and later requested again. The cause is not isolated.
