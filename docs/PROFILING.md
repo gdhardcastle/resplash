@@ -81,6 +81,7 @@ One trace per template, each running the full script.
 | **Network** (HTTP Traffic) | Total image requests, unique URLs, **duplicate count** (target 0) | Group requests by URL and compare total with unique. |
 | **Allocations** | **Persistent Bytes** at the end of A, B and C; note ImageIO and CG raster rows | Statistics view, over a range selected up to each signpost. |
 | **VM Tracker** (add to the Allocations template) | Dirty and swapped size by region type, especially ImageIO, CG image and IOSurface | Turn on automatic snapshots. **Decoded image memory lives in VM, not in the heap categories, so Allocations alone does not show it.** |
+| **Points of Interest** (add to *every* template) | The signposts below. The Animation Hitches template does not include it, so a recording made without it has no phase markers | Library (⌘L) → Points of Interest. |
 | **Animation Hitches** | Hitch count and hitch time ratio (ms per second) per phase | Phase A matters most. |
 | **Time Profiler** | % of main-thread time in image decoding (ImageIO, CGImageSource) | Select the main thread, invert the call tree, hide system libraries. |
 | **SwiftUI** | `PhotoGridCell` body updates per page load | The SwiftUI instrument's view body updates, filtered by cell type. |
