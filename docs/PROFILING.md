@@ -9,7 +9,7 @@ pipeline lands. Change one thing between runs: how images are loaded.
 |---|---|
 | Baseline | Check out the `baseline-asyncimage` tag (or `main` at that commit). |
 | Device | A physical iPhone, the same one for both runs. Hitches are not meaningful on the simulator. |
-| Scheme | Select **Resplash Profiling**. Its Run and Profile actions pass `-ProfilingHUD YES`; the plain `Resplash` scheme does not. |
+| Scheme | The shared `Resplash` scheme passes `-ProfilingHUD YES` on its **Profile** action only, so Product → Profile (⌘I) shows the HUD and a normal Run (⌘R) does not. |
 | Build | Product → Profile (⌘I). It builds **Release**. `Resplash/Config/Secrets.xcconfig` must be present. |
 | Conditions | Low Power Mode off, same Wi-Fi, other apps closed, auto-lock off, device cool. |
 | API quota | About 500 photos is about 17 list requests (30 per page). The demo limit is believed to be 50 requests per hour (confirm in the Unsplash dashboard), so do at most two runs per hour. Image downloads come from the CDN and do not count. |
@@ -17,7 +17,7 @@ pipeline lands. Change one thing between runs: how images are loaded.
 
 ### The HUD
 
-With `-ProfilingHUD YES` (set by the `Resplash Profiling` scheme) a small overlay appears at the top left of the Library:
+With `-ProfilingHUD YES` (set by the scheme's Profile action) a small overlay appears at the top left of the Library:
 
 - `Loaded N/500`: photos loaded so far.
 - `Photo K/100`: 1-based position of the photo whose cell most recently appeared, roughly where the
@@ -27,7 +27,7 @@ Each line turns green with a ✓ when it reaches its milestone, and a haptic fir
 can watch Instruments instead of the phone. The photo line is live, so it goes grey again if you scroll
 back above 100. Loading is in pages of 30, so `Loaded` crosses 500 at 510.
 
-Without the argument (the plain `Resplash` scheme) nothing is shown. The HUD is not observable by the grid, so it does not add view
+Without the argument (a normal Run) nothing is shown. The HUD is not observable by the grid, so it does not add view
 updates to the numbers being measured.
 
 ## 1. The scroll script (identical every run)
