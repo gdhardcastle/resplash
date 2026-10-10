@@ -1,0 +1,4 @@
+  (the phase 1 marker was dropped from this trace: scrolling is reported as one span)
+../../../perf-traces/loader-Animation-Hitches.trace
+  1+2 scrolling   133.2 s     26 hitches      283.4 ms    2.13 ms/s   longest  16.7 ms
+  3 pager          23.0 s      1 hitches       16.7 ms    0.72 ms/s   longest  16.7 ms

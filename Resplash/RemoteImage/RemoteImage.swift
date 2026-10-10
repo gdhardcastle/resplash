@@ -25,11 +25,22 @@ struct RemoteImage<Content: View>: View {
     }
 
     var body: some View {
-        content(phase)
-            .task(id: request) { await load() }
-            // Holding the decoded image here would keep it alive outside the cache's memory budget.
-            // It comes back from the cache, or the loader, when the view reappears.
-            .onDisappear { loaded = nil }
+        let _ = PerfCounters.bodyEvaluated("RemoteImage")
+        if PerfMode.usesAsyncImage {
+            AsyncImage(url: request.url) { phase in
+                switch phase {
+                case .success(let image): content(.loaded(image))
+                case .failure: content(.failed)
+                default: content(.loading)
+                }
+            }
+        } else {
+            content(phase)
+                .task(id: request) { await load() }
+                // Holding the decoded image here would keep it alive outside the cache's memory budget.
+                // It comes back from the cache, or the loader, when the view reappears.
+                .onDisappear { loaded = nil }
+        }
     }
 
     private var phase: RemoteImagePhase {

@@ -1,0 +1,8 @@
+../../../perf-traces/loader-Allocations.trace
+  All Heap & Anonymous VM        live    141.7 MB   allocated in total    3159.6 MB   events  23,265,526
+  All Heap Allocations           live     19.2 MB   allocated in total    1955.8 MB   events  23,259,982
+  All Anonymous VM               live    122.5 MB   allocated in total    1203.8 MB   events       5,544
+  VM: CG Raster Data             live    116.6 MB   allocated in total     354.9 MB   events         707
+  VM: IOSurface                  live      0.1 MB   allocated in total       0.1 MB   events           1
+  VM: CG Image                   live      0.0 MB   allocated in total     355.2 MB   events         816
+  VM: ImageIO_AppleJPEG_Data     live      0.0 MB   allocated in total     405.6 MB   events         784

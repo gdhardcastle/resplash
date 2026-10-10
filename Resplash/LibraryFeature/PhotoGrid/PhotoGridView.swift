@@ -16,6 +16,7 @@ struct PhotoGridView: View {
     let onSelect: (Photo) -> Void
 
     var body: some View {
+        let _ = PerfCounters.bodyEvaluated("PhotoGridView")
         switch viewModel.state {
         case .idle, .loadingFirstPage:
             PhotoGridSkeletonView()
@@ -29,7 +30,8 @@ struct PhotoGridView: View {
     }
 
     private func grid(photos: [Photo], nextPage: PhotoGridViewModel.NextPageStatus) -> some View {
-        ScrollViewReader { proxy in
+        PerfCounters.shared.set("photosLoaded", photos.count)
+        return ScrollViewReader { proxy in
             ScrollView {
                 MasonryColumns(items: photos, relativeHeight: Self.relativeHeight(of:)) { photo in
                     Button { onSelect(photo) } label: {
@@ -40,6 +42,9 @@ struct PhotoGridView: View {
                     .onAppear {
                         viewModel.photoDidAppear(photo)
                         prefetchThumbnails(after: photo, in: photos)
+                        if PerfMode.isEnabled, let index = photos.firstIndex(where: { $0.id == photo.id }) {
+                            PerfCounters.shared.set("lastAppearedIndex", index)
+                        }
                     }
                 }
 
@@ -55,7 +60,8 @@ struct PhotoGridView: View {
     /// There is no prefetch API for SwiftUI lazy stacks, so each appearing cell asks for the thumbnails
     /// of the photos after it. Each call replaces the last window, so fast scrolling cancels what it passed.
     private func prefetchThumbnails(after photo: Photo, in photos: [Photo]) {
-        guard let index = photos.firstIndex(where: { $0.id == photo.id }) else { return }
+        // The baseline is plain AsyncImage, which has no prefetching.
+        guard !PerfMode.usesAsyncImage, let index = photos.firstIndex(where: { $0.id == photo.id }) else { return }
         let ahead = photos[(index + 1)...].prefix(Self.prefetchDistance)
         imageLoader.prefetch(ahead.map(\.thumbnailRequest))
     }

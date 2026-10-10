@@ -1,0 +1,51 @@
+
+Phase 1 scroll down  (76.7 s)
+  process CPU  25.88 s  ( 33.7% of one core)
+  main thread  21.84 s  ( 28.5% of the phase)
+  main thread, where the innermost frame is:
+      4.03 s  18.4%  (unknown)
+      3.63 s  16.6%  libobjc.A.dylib
+      2.65 s  12.1%  AttributeGraph
+      2.27 s  10.4%  libswiftCore.dylib
+      2.20 s  10.1%  UIKitCore
+  the app's own functions on the main thread (inclusive):
+      21751 ms  main
+         69 ms  <deduplicated_symbol>
+         49 ms  ResplashApp.init()
+         31 ms  specialized static PerfMode.makeLoader()
+         28 ms  closure #1 in PerfStatsLabel.body.getter
+         21 ms  PerfCounters.snapshot(stats:)
+
+Phase 2 scroll back  (57.4 s)
+  process CPU  18.41 s  ( 32.1% of one core)
+  main thread  17.49 s  ( 30.5% of the phase)
+  main thread, where the innermost frame is:
+      3.27 s  18.7%  (unknown)
+      2.97 s  17.0%  libobjc.A.dylib
+      2.11 s  12.1%  AttributeGraph
+      1.85 s  10.6%  libswiftCore.dylib
+      1.70 s   9.7%  UIKitCore
+  the app's own functions on the main thread (inclusive):
+      17451 ms  main
+         39 ms  <deduplicated_symbol>
+         28 ms  closure #1 in PerfStatsLabel.body.getter
+         22 ms  PerfCounters.snapshot(stats:)
+         12 ms  RemoteImage.body.getter
+         12 ms  closure #3 in closure #1 in closure #1 in closure #1 in PhotoGridView.grid(photos:nextPage
+
+Phase 3 pager  (25.9 s)
+  process CPU   6.14 s  ( 23.7% of one core)
+  main thread   4.45 s  ( 17.2% of the phase)
+  main thread, where the innermost frame is:
+      0.81 s  18.3%  (unknown)
+      0.80 s  17.9%  libswiftCore.dylib
+      0.62 s  13.9%  libobjc.A.dylib
+      0.45 s  10.1%  SwiftUICore
+      0.42 s   9.5%  CoreFoundation
+  the app's own functions on the main thread (inclusive):
+       4347 ms  main
+        112 ms  <deduplicated_symbol>
+         87 ms  closure #2 in closure #3 in PhotoPagerView.body.getter
+         87 ms  implicit closure #4 in implicit closure #3 in closure #1 in LibraryView.body.getter
+         83 ms  GridScroller.scroll(to:)
+         83 ms  partial apply for closure #1 in closure #2 in closure #1 in PhotoGridView.grid(photos:next

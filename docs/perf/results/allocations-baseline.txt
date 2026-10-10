@@ -1,0 +1,6 @@
+../../../perf-traces/baseline-Allocations.trace
+  All Heap & Anonymous VM        live     47.6 MB   allocated in total    1982.3 MB   events  24,210,817
+  All Heap Allocations           live     21.9 MB   allocated in total    1721.1 MB   events  24,206,337
+  All Anonymous VM               live     25.6 MB   allocated in total     261.2 MB   events       4,480
+  VM: IOSurface                  live     19.0 MB   allocated in total     169.7 MB   events         913
+  VM: CG Image                   live      0.0 MB   allocated in total       0.3 MB   events          32

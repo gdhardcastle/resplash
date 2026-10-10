@@ -9,6 +9,7 @@ struct PhotoGridCell: View, Equatable {
     let isSelected: Bool
 
     var body: some View {
+        let _ = PerfCounters.bodyEvaluated("PhotoGridCell")
         VStack(alignment: .leading, spacing: 6) {
             thumbnail
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

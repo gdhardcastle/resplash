@@ -32,6 +32,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
+        let _ = PerfCounters.bodyEvaluated("LibraryView")
         ZStack {
             NavigationStack {
                 // Both grids stay alive and cross-fade, which is what keeps the list's scroll position.

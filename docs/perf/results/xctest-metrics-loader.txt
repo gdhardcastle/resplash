@@ -1,0 +1,7 @@
+Clock Monotonic Time, s = 151.214
+CPU Cycles (Resplash), kC = 78849818.049
+Absolute Memory Physical (Resplash), kB = 36635.688
+CPU Time (Resplash), s = 49.003
+CPU Instructions Retired (Resplash), kI = 109249680.918
+Memory Peak Physical (Resplash), kB = 69190.696
+Memory Physical (Resplash), kB = 13402.232

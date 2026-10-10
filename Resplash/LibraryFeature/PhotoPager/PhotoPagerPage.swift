@@ -11,6 +11,7 @@ struct PhotoPagerPage: View {
     let isHeroSource: Bool
 
     var body: some View {
+        let _ = PerfCounters.bodyEvaluated("PhotoPagerPage")
         Color(hex: photo.colorHex)
             .aspectRatio(photo.aspectRatio, contentMode: .fit)
             .overlay {

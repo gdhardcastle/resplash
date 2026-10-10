@@ -70,6 +70,7 @@ struct PhotoPagerView: View {
     }
 
     var body: some View {
+        let _ = PerfCounters.bodyEvaluated("PhotoPagerView")
         ZStack {
             Color(.systemBackground)
                 .opacity(isBackgroundShown ? 1 - dismissProgress : 0)
@@ -83,6 +84,7 @@ struct PhotoPagerView: View {
                 .opacity(isBackgroundShown ? 1 - dismissProgress * 2 : 0)
         }
         .onAppear {
+            PerfCounters.markPhase("Phase 2 ends, phase 3 starts: pager opened")
             withAnimation(.easeOut(duration: 0.3)) { isBackgroundShown = true }
         }
         .onChange(of: selection) { id in
@@ -98,12 +100,15 @@ struct PhotoPagerView: View {
                 onSettle(id)
             }
         }
-        .onDisappear { settleTask?.cancel() }
+        .onDisappear {
+            PerfCounters.markPhase("Phase 3 ends: pager closed")
+            settleTask?.cancel()
+        }
     }
 
     /// The neighbouring pages load their own images; this gets the next ones past them ready.
     private func prefetchFullScreenImages(around id: Photo.ID) {
-        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        guard !PerfMode.usesAsyncImage, let index = photos.firstIndex(where: { $0.id == id }) else { return }
         let ahead = [index - 2, index + 2].filter(photos.indices.contains).map { photos[$0].fullScreenRequest }
         imageLoader.prefetch(ahead)
     }
