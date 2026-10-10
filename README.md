@@ -4,6 +4,8 @@ An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless Editoria
 
 ## Setup
 
+Built and tested with Xcode 27.
+
 1. Create an app at <https://unsplash.com/oauth/applications> and copy its **Access Key**.
 2. `cp Resplash/Config/Secrets.example.xcconfig Resplash/Config/Secrets.xcconfig`, then open it from the `Config` folder in Xcode and paste the key.
 3. Open `Resplash.xcodeproj` and run.
@@ -12,7 +14,7 @@ An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless Editoria
 
 ## Architecture
 
-Feature-based MVVM with a repository, and no use-case layer: there is no business logic to put in one. Everything points toward `PhotoDomain`. The composition root in `ResplashApp` is the only place that knows concrete types.
+Feature-based MVVM with a repository, and no use-case layer: there is no business logic to put in one. Everything points toward the domain (`PhotoDomain` and `ImageDomain`).
 
 ```mermaid
 flowchart LR
@@ -44,7 +46,7 @@ flowchart LR
     Images --> Http
 ```
 
-Arrows point from a module to what it depends on; dotted arrows are an implementation of a protocol the domain owns. Both the photo side and the image side follow the same shape: a protocol in the domain, an implementation in the data layer. The views never see `Unsplash*`, `URLSession` or `ImageLoader`, so each side can take a test double. `RemoteImage` knows nothing of photos, so it could live in a separate UI library; `LibraryFeature` reaches the image abstraction only so its view models can say what to prefetch. `ResplashApp` and `Config` (which reads the access key) sit outside the layers: the composition root builds the concrete types and hands the loader to `RemoteImage` and to the view models.
+Arrows point to what a module depends on; dotted arrows are an implementation of a protocol the domain owns. Photos and images share one shape: a protocol in the domain, its implementation in the data layer, so the views never see `Unsplash*`, `URLSession` or `ImageLoader` and each side can be faked in tests. `ResplashApp` builds the concrete types and is the only code that knows them (`Config` reads the access key). `RemoteImage` knows nothing of photos, so it could live in a separate UI library.
 
 ### View hierarchy
 
@@ -94,7 +96,7 @@ Both grids are the same `PhotoGridView` over different view models. Only the cur
 
 ### Image pipeline
 
-`ImageLoader` is an actor behind a protocol. A request looks in the decoded **memory cache** (`NSCache`, bounded by bytes), then joins any **download already in flight** for the same request, then reads the **disk cache** (files keyed by URL hash, least recently used evicted), then goes to the network. Images are decoded and downsampled with ImageIO off the main thread.
+There are no third-party packages: the loader is built on `URLSession`, ImageIO, `NSCache` and files. `ImageLoader` is an actor behind a protocol. A request looks in the decoded **memory cache** (`NSCache`, bounded by bytes), then joins any **download already in flight** for the same request, then reads the **disk cache** (files keyed by URL hash, least recently used evicted), then goes to the network. Images are decoded and downsampled with ImageIO off the main thread.
 
 ```mermaid
 flowchart TD
@@ -115,9 +117,19 @@ flowchart TD
 - **Prefetching:** as cells appear the grid view model asks for the next 8 thumbnails, and the pager's for the pages two away. Views only report what appeared; the view models decide what to load. Each call replaces the previous window and cancels loads that fell out of it.
 - **No second cache:** the loader's session has no `URLCache`, so nothing is stored twice.
 
+## User experience
+
+- **Loading.** While the first page loads the grid shows a skeleton of grey placeholder columns, and the search results show the same until the debounce fires. Each cell reserves its final aspect ratio and shows the photo's dominant colour, so the layout does not jump and an image arrives in place of a block of roughly the right colour.
+- **Failures are local where they can be.** A failed image shows a small photo icon in its cell and is tried again the next time the cell appears. A failed *later* page leaves everything shown and puts a message and **Retry** under the grid. Only a failed *first* page replaces the screen, with an icon, a plain explanation and **Try Again**; being offline and hitting the rate limit have their own wording.
+- **Empty states** say what happened: "No photos", or "No results for “query”".
+- **Search** is always available, waits 350 ms after the last keystroke before asking the API, and drops requests it superseded. Clearing it returns to the feed instantly, at the same scroll position, with no request.
+- **Opening a photo** flies the cell's image up to full screen and back. In the pager a horizontal swipe moves exactly one photo, a vertical drag dismisses it (the background fades and the photo shrinks as you go), and the neighbouring photos' images load before you arrive. The thumbnail the grid already has sits under the full-size image, so a page is never blank while it downloads.
+- **Responsiveness.** Decoding and downsampling run off the main thread and the image loader never blocks on them. Prefetching starts the next 8 thumbnails as you scroll and is cancelled for what you passed. On an iPhone 13 Pro the scripted scroll, scroll back and swipe through the pager measured 0.7 to 2.1 ms/s of hitch time (see Performance); that is a measurement of one scripted run, not a claim about every device.
+- **Accessibility.** Each grid cell is one VoiceOver element with the photo's caption, the viewer's close button is labelled, and the skeleton announces "Loading photos".
+
 ## Performance
 
-Measured with one scripted scenario, the same every run, on an iPhone 13 Pro with a Release build: cold launch on a recorded 577-photo feed, scroll down until 300 photos are loaded, scroll back to photo 100, open the pager and swipe 20 pages. The image loader is compared with plain `AsyncImage` (no prefetching) in the same build, using Instruments and counters in the app. The harness is not in `main`: it is on the `performance-profiling` branch, which also holds text summaries of every trace. Method, per-phase results and how to repeat them are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+Measured with one scripted scenario, the same every run, on an iPhone 13 Pro with a Release build: cold launch on a recorded 577-photo feed, scroll down until 300 photos are loaded, scroll back to photo 100, open the pager and swipe 20 pages. The image loader is compared with plain `AsyncImage` (no prefetching) in the same build, using Instruments and counters in the app. The harness is not in `main`: it is on the `performance-profiling` branch, whose `docs/perf/results/` holds a text summary of every trace (Time Profiler, Allocations and Animation Hitches for each mode, and the counters). Method, per-phase results and how to repeat them are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 | Criterion | Image loader | `AsyncImage` | Evidence |
 |---|---|---|---|
@@ -137,9 +149,11 @@ Both are well inside the 5 ms/s that Apple rates as good. The CPU is the same: n
 
 ## Tests
 
+No test needs a network or an access key.
+
 **Unit tests** cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, what each view model asks to be prefetched (with a recording fake), and the image loader: shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling, and 500 photos asked for repeatedly downloaded exactly once.
 
-**UI tests** run the main flows with real touches against a fixed set of eight photos, so they need no network or access key: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The photos are defined in the test target and passed to the app as JSON in the launch environment; with `-ui-testing`, the composition root serves them through `InjectedPhotoRepository` instead of calling the API, so the app holds no fixture data.
+**UI tests** run the main flows with real touches against a fixed set of eight photos: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The photos are defined in the test target and passed to the app as JSON in the launch environment; with `-ui-testing`, the composition root serves them through `InjectedPhotoRepository` instead of calling the API, so the app holds no fixture data.
 
 ## Assumptions and limitations
 
@@ -149,3 +163,25 @@ Both are well inside the 5 ms/s that Apple rates as good. The CPU is the same: n
 - **Cancellation costs some downloads:** in the scripted run about 31 of 347 downloads (9%) were repeats, apparently loads cancelled by scrolling away and later requested again (27 cancelled loads). The cause is not isolated.
 - **Measurements are one scripted run per mode, on one device.** Nothing has a spread, so small differences (hitch time, CPU) are not findings. See `docs/PERFORMANCE.md`.
 - **Attribution:** photographer links carry the Unsplash referral parameters; I have not checked the full attribution guidelines.
+
+## Potential improvements
+
+### Offline mode
+
+Not built, but the seam for it exists: the view models depend only on the `PhotoRepository` protocol, so offline is a decorator in the data layer and needs no change to views or view models.
+
+1. **Persist pages.** A `CachingPhotoRepository` wraps `UnsplashPhotoRepository`, conforms to `PhotoRepository`, and writes each successful `Page<Photo>` to disk keyed by source and page number. `Photo` is not `Codable` today, which keeps persistence out of the domain, so the store has its own `Codable` record and maps to and from `Photo`. JSON files in Application Support are enough (SwiftData needs iOS 17, and a few hundred photos is small).
+2. **Read through on failure.** On `PhotoRepositoryError.network`, which the app already tells apart from rate limiting and bad responses, return the stored page for that source and page if there is one, and otherwise rethrow so today's error and retry states appear. A first launch with no network and nothing stored still shows "You're offline".
+3. **Refresh when online.** Show the stored first page immediately, request page 1, and replace the list when it differs (de-duplication by photo ID already exists). Pages of a moving feed can drift out of step with each other, so a refresh replaces the whole stored feed from page 1 instead of patching single pages.
+4. **Images.** `DiskImageCache` already persists them (200 MB, least recently used first), so any photo whose thumbnail was seen is on disk. Two changes: keep the stored pages' thumbnails from being evicted by browsing full-size images (a separate budget for full-size), and treat an image that cannot load offline as "not here yet" and leave the colour placeholder, not show a failure icon on every cell.
+5. **Telling the user.** A small "Offline, showing saved photos" banner driven by `NWPathMonitor`, and a reload when connectivity returns. The footer retry stays for pages that were never stored.
+6. **Tests.** The same shape as the existing repository tests: a fake inner repository that fails and a stored page that is returned; a page that was never stored still errors; a refresh replaces the stored feed; stored data from an older schema is discarded, not crashed on.
+
+The costs: stored photos can be stale or deleted upstream, search results are not covered unless stored per query, and the store needs a size cap and a schema version.
+
+### Other
+
+- **Fewer repeated downloads.** About 9% of downloads were loads cancelled by scrolling away and then asked for again. A short grace period before cancelling would let a cell that comes straight back keep its load, at the price of holding bandwidth a little longer.
+- **Fewer pager updates.** `PhotoPagerView` evaluates its `body` about 16 times per swipe. Moving the drag state into a child view would limit that to the subtree that actually moves.
+- **Cache sizing.** The 100 MB memory cache is fixed. It could scale with the device's memory and shrink on a memory warning.
+- **Measurements.** Three runs per mode would give a spread, which would show whether the small hitch and CPU differences are real.
