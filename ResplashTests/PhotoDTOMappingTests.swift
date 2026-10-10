@@ -43,4 +43,19 @@ struct PhotoDTOMappingTests {
         #expect(items.contains(URLQueryItem(name: "utm_source", value: "Resplash")))
         #expect(items.contains(URLQueryItem(name: "utm_medium", value: "referral")))
     }
+
+    @Test func theUnsplashHomepageLinkCarriesTheReferralParameters() {
+        let components = URLComponents(url: UnsplashAttribution.homepage, resolvingAgainstBaseURL: false)!
+        #expect(components.host == "unsplash.com")
+        #expect(components.queryItems == [
+            URLQueryItem(name: "utm_source", value: "Resplash"),
+            URLQueryItem(name: "utm_medium", value: "referral"),
+        ])
+    }
+
+    @Test func aReferralIsAddedToALinkThatAlreadyHasAQuery() {
+        let url = URL(string: "https://unsplash.com/@jane?foo=bar")!
+        let items = URLComponents(url: UnsplashAttribution.withReferral(url), resolvingAgainstBaseURL: false)!.queryItems!
+        #expect(items.map(\.name) == ["foo", "utm_source", "utm_medium"])
+    }
 }

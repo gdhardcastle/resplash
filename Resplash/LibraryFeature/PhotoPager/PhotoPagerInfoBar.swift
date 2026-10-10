@@ -23,12 +23,13 @@ struct PhotoPagerInfoBar: View {
         .transaction { $0.animation = nil }
     }
 
-    @ViewBuilder
-    private var attribution: some View {
-        if let url = photo.photographer.profileURL {
-            Link("Photo by \(photo.photographer.name) on Unsplash", destination: url)
-        } else {
-            Text("Photo by \(photo.photographer.name) on Unsplash")
-        }
+    /// "Photo by NAME on Unsplash", with the name linking to the photographer's profile and "Unsplash"
+    /// to unsplash.com, as Unsplash's guidelines ask. The name is plain text when there is no profile.
+    private var attribution: Text {
+        var name = AttributedString(photo.photographer.name)
+        name.link = photo.photographer.profileURL
+        var unsplash = AttributedString("Unsplash")
+        unsplash.link = UnsplashAttribution.homepage
+        return Text(AttributedString("Photo by ") + name + AttributedString(" on ") + unsplash)
     }
 }

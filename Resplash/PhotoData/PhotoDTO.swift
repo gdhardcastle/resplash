@@ -43,7 +43,7 @@ nonisolated extension PhotoDTO {
             regularURL: urls.regular,
             photographer: Photographer(
                 name: user.name,
-                profileURL: user.links?.html.flatMap(Self.withReferral)
+                profileURL: user.links?.html.map(UnsplashAttribution.withReferral)
             )
         )
     }
@@ -56,16 +56,6 @@ nonisolated extension PhotoDTO {
             }
         }
         return "Photo by \(user.name)"
-    }
-
-    /// Unsplash attribution links must carry UTM referral parameters.
-    private static func withReferral(_ url: URL) -> URL {
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
-        components.queryItems = (components.queryItems ?? []) + [
-            URLQueryItem(name: "utm_source", value: "Resplash"),
-            URLQueryItem(name: "utm_medium", value: "referral"),
-        ]
-        return components.url ?? url
     }
 }
 
