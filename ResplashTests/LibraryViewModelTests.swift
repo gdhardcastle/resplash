@@ -19,7 +19,7 @@ struct LibraryViewModelTests {
         }
         // Zero debounce: tasks still start only after the test yields, so back-to-back keystrokes
         // are cancelled before they run, exactly as a real debounce would drop them.
-        return (LibraryViewModel(repository: repository, searchDebounce: .zero), repository)
+        return (LibraryViewModel(repository: repository, prefetcher: RecordingPrefetcher(), searchDebounce: .zero), repository)
     }
 
     @Test func startLoadsTheList() async {

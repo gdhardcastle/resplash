@@ -27,8 +27,8 @@ struct LibraryView: View {
     @Namespace private var listNamespace
     @Namespace private var searchNamespace
 
-    init(repository: PhotoRepository) {
-        _viewModel = StateObject(wrappedValue: LibraryViewModel(repository: repository))
+    init(repository: PhotoRepository, imagePrefetcher: ImagePrefetching) {
+        _viewModel = StateObject(wrappedValue: LibraryViewModel(repository: repository, prefetcher: imagePrefetcher))
     }
 
     var body: some View {

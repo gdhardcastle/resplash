@@ -1,23 +1,6 @@
 import OSLog
 import UIKit
 
-nonisolated protocol ImageLoading: Sendable {
-    /// The decoded image if it is already in memory. Synchronous, so a view can draw it on its first frame.
-    /// `countingAsHit` is for a view asking because it needs the image, not for one redrawing what it has:
-    /// `body` can run many times for a single request.
-    func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage?
-    func image(for request: ImageRequest) async throws -> UIImage
-    /// Quietly loads these ahead of need. Each call replaces the previous window: requests no longer in
-    /// it are cancelled, so scrolling fast doesn't leave a queue of downloads nobody will see.
-    func prefetch(_ requests: [ImageRequest])
-}
-
-extension ImageLoading {
-    nonisolated func cachedImage(for request: ImageRequest) -> UIImage? {
-        cachedImage(for: request, countingAsHit: false)
-    }
-}
-
 nonisolated enum ImageLoadError: Error {
     case badStatus(Int)
     case undecodable

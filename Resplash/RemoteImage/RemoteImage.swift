@@ -6,7 +6,7 @@ enum RemoteImagePhase {
     case failed
 }
 
-/// Draws an image from the environment's `ImageLoader`, in place of `AsyncImage`.
+/// Draws an image from the environment's `ImageLoading`, in place of `AsyncImage`.
 ///
 /// Unlike `AsyncImage` it draws a memory-cached image on its first frame, shares downloads, cancels
 /// them when scrolled away, and retries a failure the next time it appears.
@@ -49,8 +49,15 @@ struct RemoteImage<Content: View>: View {
     }
 }
 
+/// What a view gets until the composition root supplies a loader: a failure, not a reach for a concrete type.
+private nonisolated struct UnconfiguredImageLoader: ImageLoading {
+    func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage? { nil }
+    func image(for request: ImageRequest) async throws -> UIImage { throw URLError(.unsupportedURL) }
+    func prefetch(_ requests: [ImageRequest]) {}
+}
+
 private struct ImageLoaderKey: EnvironmentKey {
-    static let defaultValue: any ImageLoading = ImageLoader.makeLive()
+    static let defaultValue: any ImageLoading = UnconfiguredImageLoader()
 }
 
 extension EnvironmentValues {

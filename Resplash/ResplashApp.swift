@@ -13,7 +13,7 @@ struct ResplashApp: App {
     var body: some Scene {
         WindowGroup {
             if let repository {
-                LibraryView(repository: repository)
+                LibraryView(repository: repository, imagePrefetcher: imageLoader)
                     .environment(\.imageLoader, imageLoader)
             } else {
                 MissingConfigView()
