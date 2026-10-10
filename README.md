@@ -48,25 +48,48 @@ Arrows point from a module to what it depends on; dotted arrows are an implement
 
 ### View hierarchy
 
+The screen is a stack of layers. Nothing is swapped out: the pager appears over the navigation stack, and search results fade in over the feed. What is underneath stays alive, which is why closing the pager or clearing a search returns to exactly where you were. Dotted arrows read "is drawn over".
+
 ```mermaid
-flowchart TD
-    App["ResplashApp"] -->|"access key set"| Library["LibraryView"]
-    App -->|"no key"| Missing["MissingConfigView"]
+flowchart TB
+    App["ResplashApp"] -->|"no access key"| Missing["MissingConfigView"]
+    App -->|"access key set"| Stack
 
-    Library --> Nav["NavigationStack<br/>with search field"]
-    Library -->|"a photo is selected"| Pager["PhotoPagerView"]
+    subgraph Stack["LibraryView: a ZStack of two layers"]
+        direction TB
 
-    Nav --> FeedGrid["PhotoGridView<br/>the feed"]
-    Nav -->|"while searching"| SearchGrid["PhotoGridView<br/>search results"]
+        subgraph Pager["Front: PhotoPagerView, only while a photo is open; covers the navigation bar too"]
+            direction TB
+            Chrome["close button and PhotoPagerInfoBar"]
+            Pages["PhotoPagerPage: current photo and its neighbours"]
+            Backdrop["background colour"]
+            Chrome -.->|"over"| Pages -.->|"over"| Backdrop
+        end
 
-    FeedGrid --> Layout["skeleton, error or empty state,<br/>or MasonryColumns"]
-    SearchGrid --> Layout
-    Layout --> Cell["PhotoGridCell, one per photo"]
-    Cell --> ThumbImage["RemoteImage<br/>thumbnail"]
+        subgraph Nav["Back: NavigationStack, always present, with the title and search field"]
+            direction TB
+            subgraph Search["Front of the stack: search results, only while searching; fades in"]
+                SearchGrid["PhotoGridView over the search view model"]
+            end
+            subgraph Feed["Back of the stack: the feed; stays alive, faded out while searching"]
+                FeedGrid["PhotoGridView over the list view model"]
+            end
+            Search -.->|"over"| Feed
+        end
 
-    Pager --> Page["PhotoPagerPage<br/>current photo and its neighbours"]
-    Pager --> Chrome["close button and PhotoPagerInfoBar"]
-    Page --> FullImage["RemoteImage ×2<br/>thumbnail under full size"]
+        Pager -.->|"over"| Nav
+    end
+```
+
+Each grid and each pager page is built from smaller views:
+
+```mermaid
+flowchart LR
+    Grid["PhotoGridView"] --> Layout["skeleton, error or empty state,<br/>or MasonryColumns"]
+    Layout --> Cell["PhotoGridCell<br/>one per photo"]
+    Cell --> Thumb["RemoteImage<br/>thumbnail"]
+
+    Page["PhotoPagerPage"] --> Both["RemoteImage ×2<br/>thumbnail, with the full size drawn over it"]
 ```
 
 Both grids are the same `PhotoGridView` over different view models. Only the current page and its two neighbours exist in the pager, so a long feed does not hold hundreds of live image views.
