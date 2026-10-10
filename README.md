@@ -126,7 +126,7 @@ Both are well inside the 5 ms/s that Apple rates as good. The CPU is the same: n
 
 **Unit tests** cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, what each view model asks to be prefetched (with a recording fake), and the image loader: shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling, and 500 photos asked for repeatedly downloaded exactly once.
 
-**UI tests** run the main flows with real touches against a fixed set of eight photos, so they need no network or access key: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The app is launched with `-ui-testing`, which swaps in `StubPhotoRepository` at the composition root.
+**UI tests** run the main flows with real touches against a fixed set of eight photos, so they need no network or access key: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The photos are defined in the test target and passed to the app as JSON in the launch environment; with `-ui-testing`, the composition root serves them through `InjectedPhotoRepository` instead of calling the API, so the app holds no fixture data.
 
 ## Assumptions and limitations
 

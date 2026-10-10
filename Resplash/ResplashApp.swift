@@ -6,9 +6,8 @@ struct ResplashApp: App {
     /// Composition root: the only place that knows concrete types. `nil` when no access key is configured.
     private let repository: PhotoRepository? = PerfMode.isEnabled
         ? PerfMode.makeRepository()
-        : UITestSupport.isEnabled
-            ? StubPhotoRepository()
-            : (try? Config()).map { UnsplashPhotoRepository(api: UnsplashAPI(accessKey: $0.unsplashAccessKey)) }
+        : InjectedPhotoRepository.fromLaunch()
+            ?? (try? Config()).map { UnsplashPhotoRepository(api: UnsplashAPI(accessKey: $0.unsplashAccessKey)) }
 
     private let imageLoader = PerfMode.makeLoader()
 
