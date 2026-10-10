@@ -58,13 +58,7 @@ flowchart TB
     subgraph Stack["LibraryView: a ZStack of two layers"]
         direction TB
 
-        subgraph Pager["Front: PhotoPagerView, only while a photo is open; covers the navigation bar too"]
-            direction TB
-            Chrome["close button and PhotoPagerInfoBar"]
-            Pages["PhotoPagerPage: current photo and its neighbours"]
-            Backdrop["background colour"]
-            Chrome -.->|"over"| Pages -.->|"over"| Backdrop
-        end
+        Pager["<b>Front: PhotoPagerView</b><br/>only while a photo is open; covers the navigation bar too<br/>background, the pages, and the close button and info bar on top"]
 
         subgraph Nav["Back: NavigationStack, always present, with the title and search field"]
             direction TB
