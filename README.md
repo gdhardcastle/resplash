@@ -2,6 +2,19 @@
 
 An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless Editorial feed, a full-screen pager, and search.
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/feed.jpg" width="260" alt="The feed: a two-column masonry grid with captions"></td>
+    <td><img src="docs/screenshots/viewer.jpg" width="260" alt="The viewer: a full-screen photo with its caption and credit"></td>
+    <td><img src="docs/screenshots/search.jpg" width="260" alt="Search results for hippo"></td>
+  </tr>
+  <tr>
+    <td align="center">The feed</td>
+    <td align="center">The viewer, with its credit</td>
+    <td align="center">Search</td>
+  </tr>
+</table>
+
 ## Setup
 
 Built and tested with Xcode 27.
