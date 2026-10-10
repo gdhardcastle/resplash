@@ -53,19 +53,19 @@ Arrows point to what a module depends on; dotted arrows are an implementation of
 The screen is a stack of layers. Nothing is swapped out: the pager appears over the navigation stack, and search results fade in over the feed. What is underneath stays alive, which is why closing the pager or clearing a search returns to exactly where you were. Dotted arrows read "is drawn over".
 
 ```mermaid
-flowchart TB
+flowchart LR
     App["ResplashApp"] -->|"no access key"| Missing["MissingConfigView"]
     App -->|"access key set"| Stack
 
     subgraph Stack["LibraryView: a ZStack of the navigation stack and the pager"]
-        direction TB
+        direction LR
 
         Pager["<b>Front: PhotoPagerView</b><br/>only while a photo is open; covers the navigation bar too<br/>background, the pages, and the close button and info bar on top"]
 
         subgraph Nav["Back: NavigationStack, always present, with the title and search field"]
-            direction TB
+            direction LR
             subgraph Inner["a ZStack of the two grids"]
-                direction TB
+                direction LR
                 SearchGrid["<b>Front: search results</b><br/>PhotoGridView over the search view model<br/>only while searching; fades in"]
                 FeedGrid["<b>Back: the feed</b><br/>PhotoGridView over the list view model<br/>stays alive, faded out while searching"]
                 SearchGrid -.->|"over"| FeedGrid
@@ -99,7 +99,7 @@ Both grids are the same `PhotoGridView` over different view models. Only the cur
 There are no third-party packages: the loader is built on `URLSession`, ImageIO, `NSCache` and files. `ImageLoader` is an actor behind a protocol. A request looks in the decoded **memory cache** (`NSCache`, bounded by bytes), then joins any **download already in flight** for the same request, then reads the **disk cache** (files keyed by URL hash, least recently used evicted), then goes to the network. Images are decoded and downsampled with ImageIO off the main thread.
 
 ```mermaid
-flowchart TD
+flowchart LR
     Req["Image request<br/><i>URL + max pixel size</i>"] --> Mem{"Decoded image<br/>in memory cache?"}
     Mem -- yes --> Done["Return image"]
     Mem -- no --> Fly{"Same request<br/>already in flight?"}
