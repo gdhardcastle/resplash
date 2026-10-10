@@ -41,3 +41,6 @@ Resplash/Config/Secrets.xcconfig
 
 # Local planning notes
 PLAN.md
+
+# Instruments recordings made on the performance-profiling branch
+perf-traces/
