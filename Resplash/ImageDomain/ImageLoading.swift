@@ -13,6 +13,14 @@ nonisolated protocol ImagePrefetching: Sendable {
 /// an abstraction and `ImageData` is only one way to provide it.
 nonisolated protocol ImageLoading: ImagePrefetching {
     /// The decoded image if it is already in memory. Synchronous, so a view can draw it on its first frame.
-    func cachedImage(for request: ImageRequest) -> UIImage?
+    /// `countingAsHit` is for a view asking because it needs the image, not for one redrawing what it has:
+    /// `body` can run many times for a single request.
+    func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage?
     func image(for request: ImageRequest) async throws -> UIImage
+}
+
+extension ImageLoading {
+    nonisolated func cachedImage(for request: ImageRequest) -> UIImage? {
+        cachedImage(for: request, countingAsHit: false)
+    }
 }

@@ -30,7 +30,7 @@ flowchart LR
     subgraph Data
         direction TB
         PhotoData["<b>PhotoData</b><br/>UnsplashPhotoRepository<br/>UnsplashAPI · PhotoDTO"]
-        Images["<b>ImageData</b><br/>ImageLoader (actor)<br/>MemoryImageCache · DiskImageCache<br/>ImageDownsampler"]
+        Images["<b>ImageData</b><br/>ImageLoader (actor)<br/>MemoryImageCache · DiskImageCache<br/>ImageDownsampler<br/>ImagePipelineStats"]
         Http["<b>HTTPClient</b><br/>HTTPClient (protocol)<br/>URLSessionHTTPClient"]
     end
 
@@ -114,6 +114,7 @@ flowchart TD
 - **Cancellation is reference-counted.** A cell scrolling away cancels the load only when no other request is waiting on it.
 - **Prefetching:** as cells appear the grid view model asks for the next 8 thumbnails, and the pager's for the pages two away. Views only report what appeared; the view models decide what to load. Each call replaces the previous window and cancels loads that fell out of it.
 - **No second cache:** the loader's session has no `URLCache`, so nothing is stored twice.
+- **Counters:** `ImagePipelineStats` counts how each request was served (memory, joined, disk, download, decode, cancelled) and writes each as a Points of Interest event, so a recording shows the cache hit rate and downloads per URL.
 
 ## Performance
 

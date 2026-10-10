@@ -50,7 +50,7 @@ struct RemoteImage<Content: View>: View {
 
     private func load() async {
         failed = false
-        guard loader.cachedImage(for: request) == nil else { return }
+        guard loader.cachedImage(for: request, countingAsHit: true) == nil else { return }
         do {
             loaded = try await loader.image(for: request)
         } catch {
@@ -62,7 +62,7 @@ struct RemoteImage<Content: View>: View {
 
 /// What a view gets until the composition root supplies a loader: a failure, not a reach for a concrete type.
 private nonisolated struct UnconfiguredImageLoader: ImageLoading {
-    func cachedImage(for request: ImageRequest) -> UIImage? { nil }
+    func cachedImage(for request: ImageRequest, countingAsHit: Bool) -> UIImage? { nil }
     func image(for request: ImageRequest) async throws -> UIImage { throw URLError(.unsupportedURL) }
     func prefetch(_ requests: [ImageRequest]) {}
 }
