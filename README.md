@@ -55,20 +55,19 @@ flowchart TB
     App["ResplashApp"] -->|"no access key"| Missing["MissingConfigView"]
     App -->|"access key set"| Stack
 
-    subgraph Stack["LibraryView: a ZStack of two layers"]
+    subgraph Stack["LibraryView: a ZStack of the navigation stack and the pager"]
         direction TB
 
         Pager["<b>Front: PhotoPagerView</b><br/>only while a photo is open; covers the navigation bar too<br/>background, the pages, and the close button and info bar on top"]
 
         subgraph Nav["Back: NavigationStack, always present, with the title and search field"]
             direction TB
-            subgraph Search["Front of the stack: search results, only while searching; fades in"]
-                SearchGrid["PhotoGridView over the search view model"]
+            subgraph Inner["a ZStack of the two grids"]
+                direction TB
+                SearchGrid["<b>Front: search results</b><br/>PhotoGridView over the search view model<br/>only while searching; fades in"]
+                FeedGrid["<b>Back: the feed</b><br/>PhotoGridView over the list view model<br/>stays alive, faded out while searching"]
+                SearchGrid -.->|"over"| FeedGrid
             end
-            subgraph Feed["Back of the stack: the feed; stays alive, faded out while searching"]
-                FeedGrid["PhotoGridView over the list view model"]
-            end
-            Search -.->|"over"| Feed
         end
 
         Pager -.->|"over"| Nav
