@@ -9,8 +9,8 @@ An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless Editoria
     <td><img src="docs/screenshots/search.jpg" width="260" alt="Search results for hippo"></td>
   </tr>
   <tr>
-    <td align="center">The feed</td>
-    <td align="center">The viewer, with its credit</td>
+    <td align="center">Feed</td>
+    <td align="center">Pager</td>
     <td align="center">Search</td>
   </tr>
 </table>
