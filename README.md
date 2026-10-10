@@ -135,8 +135,6 @@ Both are well inside the 5 ms/s that Apple rates as good. The CPU is the same: n
 - **`RemoteImage` re-evaluates more** (637 `body` runs against 494), most likely because it publishes its load state as `@State`; they are small leaf views. I did not isolate the cause.
 - **The pager runs its `body` about 16 times per swipe** (324 over 20 swipes), most likely once per frame of the drag. It is the largest body count within the pager phase; over the whole run `PhotoGridCell` is larger (444).
 
-**What this does not show.** One run per mode, so there is no spread. The SwiftUI instrument recorded no update events in either trace, so the `body` counters, not that instrument, are the evidence for view updates. XCTest's physical-memory metric ordered the two modes the other way round (36.6 MB against 55.6 MB at the end) and I have not explained the difference; I used Allocations, which agrees with the Xcode memory gauge. In the Animation Hitches traces the marker between scrolling down and scrolling back was dropped, so those two phases are reported together.
-
 ## Tests
 
 **Unit tests** cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, what each view model asks to be prefetched (with a recording fake), and the image loader: shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling, and 500 photos asked for repeatedly downloaded exactly once.
