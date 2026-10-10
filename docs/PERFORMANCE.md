@@ -81,9 +81,9 @@ cache that holds about 40, then asked for again, make exactly 500 downloads.
 
 The grid and library update identically in both modes: one cell body per appearance, the grid once per
 page load, and the grid not at all while paging apart from opening and closing. The loader re-evaluates
-the small `RemoteImage` leaf about 29% more, since it publishes its own load state. `PhotoPagerView` runs
-about 16 times per swipe because it re-evaluates every frame of the drag; it is the largest remaining
-body count.
+the small `RemoteImage` leaf about 29% more, most likely because it publishes its own load state (not
+isolated). `PhotoPagerView` runs about 16 times per swipe, most likely once per frame of the drag; it is
+the largest count within the pager phase, though `PhotoGridCell` is larger over the whole run.
 
 The Instruments SwiftUI template recorded no update events in either trace (every `swiftui-*` table was
 empty), so these counters are the evidence for this focus.
