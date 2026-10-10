@@ -10,7 +10,7 @@ Built and tested with Xcode 27.
 2. `cp Resplash/Config/Secrets.example.xcconfig Resplash/Config/Secrets.xcconfig`, then open it from the `Config` folder in Xcode and paste the key.
 3. Open `Resplash.xcodeproj` and run.
 
-`Secrets.xcconfig` is gitignored. The key flows `xcconfig → Info.plist (UnsplashAccessKey) → Config`. Without a key the app shows an in-app message instead of crashing.
+`Secrets.xcconfig` is gitignored and not in the app target. The key flows `xcconfig → Info.plist → Config`: it stays out of git, but it ends up in the built app's `Info.plist`, so it is not secret. A production app would proxy through a backend, as Unsplash's guidelines ask. Without a key the app shows an in-app message instead of crashing.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ flowchart LR
     end
 
     subgraph Domain
-        Photos["<b>PhotoDomain</b><br/>Photo · Page · PhotoSource<br/>PhotoRepository (protocol)"]
+        Photos["<b>PhotoDomain</b><br/>Photo · Page · PhotoSource<br/>PhotoRepository (protocol)<br/>UnsplashAttribution"]
         ImageDomain["<b>ImageDomain</b><br/>ImageRequest<br/>ImageLoading (protocol)<br/>ImagePrefetching (protocol)"]
     end
 
@@ -154,15 +154,6 @@ No test needs a network or an access key.
 **Unit tests** cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, what each view model asks to be prefetched (with a recording fake), and the image loader: shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling, and 500 photos asked for repeatedly downloaded exactly once.
 
 **UI tests** run the main flows with real touches against a fixed set of eight photos: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The photos are defined in the test target and passed to the app as JSON in the launch environment; with `-ui-testing`, the composition root serves them through `InjectedPhotoRepository` instead of calling the API, so the app holds no fixture data.
-
-## Assumptions and limitations
-
-- **The access key is kept out of git, but it is not secret.** `Secrets.xcconfig` is gitignored and not in the app target, but its value is substituted into `Info.plist` at build time, so it ships in the app bundle. A production app would proxy through a backend.
-- **Rate limit:** demo keys are limited per hour. The app shows a rate-limit state on a 403 with no remaining requests; that is covered by unit tests but not exercised against the live limit.
-- **No offline mode.** Images are disk-cached, but the feed is not persisted, so a cold start without a network shows the error state.
-- **Cancellation costs some downloads:** in the scripted run about 31 of 347 downloads (9%) were repeats, apparently loads cancelled by scrolling away and later requested again (27 cancelled loads). The cause is not isolated.
-- **Measurements are one scripted run per mode, on one device.** Nothing has a spread, so small differences (hitch time, CPU) are not findings. See `docs/PERFORMANCE.md`.
-- **Attribution:** photographer links carry the Unsplash referral parameters; I have not checked the full attribution guidelines.
 
 ## Potential improvements
 
