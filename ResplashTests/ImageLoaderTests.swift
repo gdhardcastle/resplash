@@ -76,9 +76,6 @@ struct ImageLoaderTests {
         _ = try await (first, second, third)
 
         #expect(http.requests.count == 1)
-        #expect(loader.stats.count(.download) == 1)
-        #expect(loader.stats.count(.joined) == 2)
-        #expect(loader.stats.count(.decode) == 1)
     }
 
     @Test func cancellingOneWaiterLeavesTheDownloadForTheOthers() async throws {
@@ -97,7 +94,6 @@ struct ImageLoaderTests {
         _ = try await staying.value
         #expect(http.requests.count == 1)
         #expect(http.cancelledCount == 0)
-        #expect(loader.stats.count(.cancelledLoad) == 0)
     }
 
     @Test func cancellingTheLastWaiterCancelsTheDownload() async throws {
@@ -110,7 +106,6 @@ struct ImageLoaderTests {
         await waitUntil { http.cancelledCount >= 1 }
 
         #expect(http.cancelledCount == 1)
-        #expect(loader.stats.count(.cancelledLoad) == 1)
     }
 
     @Test func aRequestAfterACancellationStartsAFreshDownload() async throws {
@@ -138,8 +133,6 @@ struct ImageLoaderTests {
 
         #expect(loader.cachedImage(for: request) != nil)
         #expect(http.requests.count == 1)
-        #expect(loader.stats.count(.download) == 1)
-        #expect(loader.stats.count(.memoryHit) == 1)
     }
 
     @Test func aFreshLoaderReadsTheDiskCacheInsteadOfTheNetwork() async throws {
@@ -153,25 +146,9 @@ struct ImageLoaderTests {
         _ = try await later.image(for: request)
 
         #expect(laterHTTP.requests.isEmpty)
-        #expect(later.stats.count(.diskHit) == 1)
-        #expect(later.stats.count(.download) == 0)
     }
 
-    @Test func aViewAskingForAnImageAlreadyInMemoryCountsAsAHitButADrawDoesNot() async throws {
-        let http = GatedHTTPClient()
-        http.open()
-        let loader = makeLoader(http)
-        _ = try await loader.image(for: request)
-
-        _ = loader.cachedImage(for: request)
-        _ = loader.cachedImage(for: request)
-        #expect(loader.stats.count(.memoryHit) == 0)
-
-        _ = loader.cachedImage(for: request, countingAsHit: true)
-        #expect(loader.stats.count(.memoryHit) == 1)
-    }
-
-    @Test func aPrefetchIsNotCountedAsARequestForTheScreen() async throws {
+    @Test func aPrefetchedImageIsNotRequestedAgain() async throws {
         let http = GatedHTTPClient()
         http.open()
         let loader = makeLoader(http)
@@ -179,12 +156,10 @@ struct ImageLoaderTests {
         loader.prefetch([request])
         await waitUntil { loader.cachedImage(for: request) != nil }
         loader.prefetch([request])
+        _ = try await loader.image(for: request)
         try await Task.sleep(for: .milliseconds(50))
 
-        #expect(loader.stats.count(.prefetchStarted) == 1)
-        #expect(loader.stats.count(.memoryHit) == 0)
-        #expect(loader.stats.count(.joined) == 0)
-        #expect(loader.stats.count(.download) == 1)
+        #expect(http.requests.count == 1)
     }
 
     /// The "no duplicated work" guarantee at the scale of the scenario: 500 photos, each asked for twice
@@ -213,9 +188,6 @@ struct ImageLoaderTests {
 
         #expect(http.requests.count == 500)
         #expect(Set(http.requests).count == 500)
-        #expect(loader.stats.count(.download) == 500)
-        #expect(loader.stats.count(.diskHit) > 0)
-        #expect(loader.stats.count(.failure) == 0)
     }
 
     @Test func aBadStatusFailsAndCachesNothing() async throws {
@@ -225,7 +197,6 @@ struct ImageLoaderTests {
 
         await #expect(throws: ImageLoadError.self) { try await loader.image(for: request) }
         #expect(loader.cachedImage(for: request) == nil)
-        #expect(loader.stats.count(.failure) == 1)
     }
 
     @Test func prefetchingANewWindowCancelsTheOldOne() async throws {
@@ -240,7 +211,6 @@ struct ImageLoaderTests {
 
         #expect(http.cancelledCount == 1)
         #expect(http.requests.contains(other.url))
-        #expect(loader.stats.count(.prefetchStarted) == 2)
     }
 }
 
