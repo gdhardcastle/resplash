@@ -4,7 +4,6 @@ import SwiftUI
 struct PhotoGridView: View {
 
     @ObservedObject var viewModel: PhotoGridViewModel
-    @Environment(\.imageLoader) private var imageLoader
     
     let namespace: Namespace.ID
     /// The photo currently shown in the pager, if any. Read-only: the grid never owns selection.
@@ -41,7 +40,7 @@ struct PhotoGridView: View {
                     .buttonStyle(.plain)
                     .onAppear {
                         viewModel.photoDidAppear(photo)
-                        prefetchThumbnails(after: photo, in: photos)
+                        viewModel.prefetchThumbnails(after: photo)
                         if PerfMode.isEnabled, let index = photos.firstIndex(where: { $0.id == photo.id }) {
                             PerfCounters.shared.set("lastAppearedIndex", index)
                         }
@@ -54,18 +53,6 @@ struct PhotoGridView: View {
         }
     }
     
-    /// How many photos ahead of the one that just appeared to start loading.
-    private static let prefetchDistance = 8
-
-    /// There is no prefetch API for SwiftUI lazy stacks, so each appearing cell asks for the thumbnails
-    /// of the photos after it. Each call replaces the last window, so fast scrolling cancels what it passed.
-    private func prefetchThumbnails(after photo: Photo, in photos: [Photo]) {
-        // The baseline is plain AsyncImage, which has no prefetching.
-        guard !PerfMode.usesAsyncImage, let index = photos.firstIndex(where: { $0.id == photo.id }) else { return }
-        let ahead = photos[(index + 1)...].prefix(Self.prefetchDistance)
-        imageLoader.prefetch(ahead.map(\.thumbnailRequest))
-    }
-
     /// A cell's height relative to its width: the image at its aspect ratio, plus allowance for the
     /// two-line caption and spacing under it (roughly 0.22 of the column width at 183pt wide).
     private static func relativeHeight(of photo: Photo) -> Double {

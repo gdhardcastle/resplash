@@ -47,17 +47,20 @@ final class PhotoGridViewModel: ObservableObject {
     
     let source: PhotoSource
     private let repository: PhotoRepository
+    private let prefetcher: ImagePrefetching
     private let perPage: Int
     private let prefetchThreshold: Int
 
     init(
         source: PhotoSource,
         repository: PhotoRepository,
+        prefetcher: ImagePrefetching,
         perPage: Int = 30,
         prefetchThreshold: Int = 6
     ) {
         self.source = source
         self.repository = repository
+        self.prefetcher = prefetcher
         self.perPage = perPage
         self.prefetchThreshold = prefetchThreshold
     }
@@ -88,6 +91,26 @@ final class PhotoGridViewModel: ObservableObject {
         // suffix is O(threshold), not O(n).
         guard photos.suffix(prefetchThreshold).contains(where: { $0.id == photo.id }) else { return }
         startLoadingNextPage()
+    }
+
+    /// How many photos ahead of the one that just appeared to start loading thumbnails for.
+    private static let thumbnailPrefetchDistance = 8
+
+    /// There is no prefetch API for SwiftUI lazy stacks, so each appearing cell asks for the thumbnails
+    /// of the photos after it. Each call replaces the last window, so fast scrolling cancels what it passed.
+    func prefetchThumbnails(after photo: Photo) {
+        let photos = photos
+        guard let index = photos.firstIndex(where: { $0.id == photo.id }) else { return }
+        let ahead = photos[(index + 1)...].prefix(Self.thumbnailPrefetchDistance)
+        prefetcher.prefetch(ahead.map(\.thumbnailRequest))
+    }
+
+    /// The pager's own pages load their images; this gets the ones two away on either side ready.
+    func prefetchFullScreenImages(around id: Photo.ID) {
+        let photos = photos
+        guard let index = photos.firstIndex(where: { $0.id == id }) else { return }
+        let wanted = [index - 2, index + 2].filter(photos.indices.contains).map { photos[$0].fullScreenRequest }
+        prefetcher.prefetch(wanted)
     }
 
     func retryLoadMore() {

@@ -187,6 +187,37 @@ struct ImageLoaderTests {
         #expect(loader.stats.count(.download) == 1)
     }
 
+    /// The "no duplicated work" guarantee at the scale of the scenario: 500 photos, each asked for twice
+    /// at once (the grid and the pager), through a memory cache far too small to hold them, then asked
+    /// for again. Each URL must go to the network exactly once; the second pass is answered from disk.
+    @Test func fiveHundredPhotosAskedForRepeatedlyAreDownloadedOnce() async throws {
+        let http = GatedHTTPClient()
+        http.open()
+        // Holds about 40 of the 256-byte test images, so most of the second pass misses memory.
+        let loader = ImageLoader(
+            http: http,
+            memory: MemoryImageCache(totalCostLimit: 10_000),
+            disk: DiskImageCache(directory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        )
+        let requests = (0..<500).map { ImageRequest(url: URL(string: "https://example.com/\($0)")!, maxPixelSize: 100) }
+
+        for _ in 0..<2 {
+            await withTaskGroup(of: Void.self) { group in
+                for request in requests {
+                    for _ in 0..<2 {
+                        group.addTask { _ = try? await loader.image(for: request) }
+                    }
+                }
+            }
+        }
+
+        #expect(http.requests.count == 500)
+        #expect(Set(http.requests).count == 500)
+        #expect(loader.stats.count(.download) == 500)
+        #expect(loader.stats.count(.diskHit) > 0)
+        #expect(loader.stats.count(.failure) == 0)
+    }
+
     @Test func aBadStatusFailsAndCachesNothing() async throws {
         let http = GatedHTTPClient(status: 404)
         http.open()

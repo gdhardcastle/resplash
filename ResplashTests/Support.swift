@@ -116,3 +116,16 @@ actor Gate {
         continuation = nil
     }
 }
+
+/// Records what a view model asked to be prefetched.
+final class RecordingPrefetcher: ImagePrefetching, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _calls: [[ImageRequest]] = []
+
+    /// One entry per `prefetch` call, in order.
+    var calls: [[ImageRequest]] { lock.withLock { _calls } }
+
+    func prefetch(_ requests: [ImageRequest]) {
+        lock.withLock { _calls.append(requests) }
+    }
+}

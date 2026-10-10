@@ -14,7 +14,17 @@ struct PhotoGridViewModelTests {
         _ handler: @escaping MockPhotoRepository.Handler
     ) -> (PhotoGridViewModel, MockPhotoRepository) {
         let repository = MockPhotoRepository(handler)
-        return (PhotoGridViewModel(source: .list, repository: repository, perPage: perPage, prefetchThreshold: threshold), repository)
+        return (PhotoGridViewModel(source: .list, repository: repository, prefetcher: RecordingPrefetcher(), perPage: perPage, prefetchThreshold: threshold), repository)
+    }
+
+    /// One page of photos "1"…"20", loaded, with a prefetcher to inspect.
+    private func loadedViewModel() async -> (PhotoGridViewModel, RecordingPrefetcher) {
+        let prefetcher = RecordingPrefetcher()
+        let repository = MockPhotoRepository { _, _ in Page(items: stubPhotos(1...20), nextPage: nil) }
+        let viewModel = PhotoGridViewModel(source: .list, repository: repository, prefetcher: prefetcher, perPage: 20)
+        viewModel.loadFirstPageIfNeeded()
+        await viewModel.settled()
+        return (viewModel, prefetcher)
     }
 
     /// Three pages of five photos: 1…5, 6…10, 11…15.
@@ -202,6 +212,39 @@ struct PhotoGridViewModelTests {
         await viewModel.settled()
         #expect(viewModel.isLoaded)
         #expect(viewModel.photos.isEmpty)
+    }
+
+    // MARK: Prefetching
+
+    @Test func anAppearingPhotoPrefetchesThumbnailsOfTheNextEight() async {
+        let (viewModel, prefetcher) = await loadedViewModel()
+        viewModel.prefetchThumbnails(after: Photo.stub("3"))
+        #expect(prefetcher.calls == [(4...11).map { Photo.stub(String($0)).thumbnailRequest }])
+    }
+
+    @Test func prefetchingNearTheEndAsksForWhatIsLeft() async {
+        let (viewModel, prefetcher) = await loadedViewModel()
+        viewModel.prefetchThumbnails(after: Photo.stub("18"))
+        #expect(prefetcher.calls == [[Photo.stub("19").thumbnailRequest, Photo.stub("20").thumbnailRequest]])
+    }
+
+    @Test func aPhotoTheViewModelDoesNotHaveIsNotPrefetchedAround() async {
+        let (viewModel, prefetcher) = await loadedViewModel()
+        viewModel.prefetchThumbnails(after: Photo.stub("999"))
+        viewModel.prefetchFullScreenImages(around: "999")
+        #expect(prefetcher.calls.isEmpty)
+    }
+
+    @Test func thePagerPrefetchesFullScreenImagesTwoAwayEitherSide() async {
+        let (viewModel, prefetcher) = await loadedViewModel()
+        viewModel.prefetchFullScreenImages(around: "10")
+        #expect(prefetcher.calls == [[Photo.stub("8").fullScreenRequest, Photo.stub("12").fullScreenRequest]])
+    }
+
+    @Test func thePagerPrefetchSkipsPagesThatDoNotExist() async {
+        let (viewModel, prefetcher) = await loadedViewModel()
+        viewModel.prefetchFullScreenImages(around: "1")
+        #expect(prefetcher.calls == [[Photo.stub("3").fullScreenRequest]])
     }
 }
 

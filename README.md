@@ -1,6 +1,6 @@
 # Resplash
 
-An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless masonry grid of the Editorial feed, a full-screen pager with a hero transition, and search that reuses the same grid.
+An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless Editorial feed, a full-screen pager, and search.
 
 ## Setup
 
@@ -12,22 +12,66 @@ An iOS 16+ SwiftUI photo library backed by the Unsplash API: an endless masonry 
 
 ## Architecture
 
-Feature-based MVVM with a repository, and no use-case layer: there is no business logic to put in one. Everything points toward `PhotoDomain`.
+Feature-based MVVM with a repository, and no use-case layer: there is no business logic to put in one. Everything points toward `PhotoDomain`. The composition root in `ResplashApp` is the only place that knows concrete types.
 
+```mermaid
+flowchart LR
+    subgraph Presentation
+        direction TB
+        Library["<b>LibraryFeature</b><br/>LibraryView<br/>PhotoGridView · PhotoGridCell<br/>PhotoPagerView · PhotoPagerPage<br/>PhotoPagerInfoBar<br/>Photo+ImageRequests<br/>LibraryViewModel<br/>PhotoGridViewModel"]
+        Remote["<b>RemoteImage</b><br/>RemoteImage<br/>image environment key"]
+    end
+
+    subgraph Domain
+        Photos["<b>PhotoDomain</b><br/>Photo · Page · PhotoSource<br/>PhotoRepository (protocol)"]
+        ImageDomain["<b>ImageDomain</b><br/>ImageRequest<br/>ImageLoading (protocol)<br/>ImagePrefetching (protocol)"]
+    end
+
+    subgraph Data
+        direction TB
+        PhotoData["<b>PhotoData</b><br/>UnsplashPhotoRepository<br/>UnsplashAPI · PhotoDTO"]
+        Images["<b>ImageData</b><br/>ImageLoader (actor)<br/>MemoryImageCache · DiskImageCache<br/>ImageDownsampler<br/>ImagePipelineStats"]
+        Http["<b>HTTPClient</b><br/>HTTPClient (protocol)<br/>URLSessionHTTPClient"]
+    end
+
+    Library --> Photos
+    Library --> Remote
+    Library -->|"prefetch"| ImageDomain
+    Remote --> ImageDomain
+    PhotoData -.->|"implements"| Photos
+    Images -.->|"implements"| ImageDomain
+    PhotoData --> Http
+    Images --> Http
 ```
-Views → ViewModels → PhotoDomain (Photo, PhotoRepository) ← PhotoData (API, DTOs, mapper)
-                                                         ← ImageData  (image loader and caches)
+
+Arrows point from a module to what it depends on; dotted arrows are an implementation of a protocol the domain owns. Both the photo side and the image side follow the same shape: a protocol in the domain, an implementation in the data layer. The views never see `Unsplash*`, `URLSession` or `ImageLoader`, so each side can take a test double. `RemoteImage` knows nothing of photos, so it could live in a separate UI library; `LibraryFeature` reaches the image abstraction only so its view models can say what to prefetch. `ResplashApp` and `Config` (which reads the access key) sit outside the layers: the composition root builds the concrete types and hands the loader to `RemoteImage` and to the view models.
+
+### View hierarchy
+
+```mermaid
+flowchart TD
+    App["ResplashApp"] -->|"access key set"| Library["LibraryView"]
+    App -->|"no key"| Missing["MissingConfigView"]
+
+    Library --> Nav["NavigationStack<br/>with search field"]
+    Library -->|"a photo is selected"| Pager["PhotoPagerView"]
+
+    Nav --> FeedGrid["PhotoGridView<br/>the feed"]
+    Nav -->|"while searching"| SearchGrid["PhotoGridView<br/>search results"]
+
+    FeedGrid --> Layout["skeleton, error or empty state,<br/>or MasonryColumns"]
+    SearchGrid --> Layout
+    Layout --> Cell["PhotoGridCell, one per photo"]
+    Cell --> ThumbImage["RemoteImage<br/>thumbnail"]
+
+    Pager --> Page["PhotoPagerPage<br/>current photo and its neighbours"]
+    Pager --> Chrome["close button and PhotoPagerInfoBar"]
+    Page --> FullImage["RemoteImage ×2<br/>thumbnail under full size"]
 ```
 
-| Folder | Contents |
-|---|---|
-| `PhotoDomain` | `Photo`, `Page`, `PhotoSource`, the `PhotoRepository` protocol. Depends on nothing. |
-| `PhotoData`, `HTTPClient` | Unsplash endpoints, DTOs, the mapper (`alt_description` → `description` → placeholder), error and rate-limit mapping. |
-| `ImageData`, `RemoteImage` | The image pipeline and the SwiftUI view that uses it. |
-| `LibraryFeature` | The screen: grid, pager, search. |
-| `Config` | Reads the access key. The composition root in `ResplashApp` is the only place that knows concrete types. |
+Both grids are the same `PhotoGridView` over different view models. Only the current page and its two neighbours exist in the pager, so a long feed does not hold hundreds of live image views.
 
-- **State:** `ObservableObject` and `@Published`, because `@Observable` needs iOS 17. View models are `@MainActor`, with async/await.
+- **View models:** `ObservableObject` and `@Published`, because `@Observable` needs iOS 17. View models are `@MainActor`, with async/await.
 - **One grid view model per source.** `PhotoGridViewModel` owns paging (state enum, generation token so a stale response never lands in a newer list, an in-flight guard, de-duplication by photo ID, a footer retry for failed later pages). `LibraryViewModel` keeps a list view model for the whole session and makes a fresh one per search, so clearing a search returns to the list instantly with its scroll position and no requests. Search is debounced by 350 ms.
 - **Cells take values, not view models.** `PhotoGridCell` is `Equatable`, so one change does not re-render every cell. Layout is reserved from each photo's aspect ratio, with its dominant colour as the placeholder.
 - **Hero transition.** `matchedGeometryEffect` between grid cell and pager page, in an overlay rather than a navigation push (the zoom transition needs iOS 18). The pager is hand-rolled rather than `TabView(.page)`, which ignores SwiftUI transactions and so cannot fly the selected photo in. It owns its current page, so paging does not re-evaluate the grid underneath; the grid is scrolled to the page after a pause, and its cell swaps its image only when the pager closes.
@@ -36,44 +80,59 @@ Views → ViewModels → PhotoDomain (Photo, PhotoRepository) ← PhotoData (API
 
 `ImageLoader` is an actor behind a protocol. A request looks in the decoded **memory cache** (`NSCache`, bounded by bytes), then joins any **download already in flight** for the same request, then reads the **disk cache** (files keyed by URL hash, least recently used evicted), then goes to the network. Images are decoded and downsampled with ImageIO off the main thread.
 
+```mermaid
+flowchart TD
+    Req["Image request<br/><i>URL + max pixel size</i>"] --> Mem{"Decoded image<br/>in memory cache?"}
+    Mem -- yes --> Done["Return image"]
+    Mem -- no --> Fly{"Same request<br/>already in flight?"}
+    Fly -- yes --> Join["Join it<br/><i>waiters + 1</i>"] --> Done
+    Fly -- no --> Disk{"File in<br/>disk cache?"}
+    Disk -- yes --> Dec["Decode and downsample<br/><i>off the main thread</i>"]
+    Disk -- no --> Net["Download"] --> Dec
+    Net -. "after decoding" .-> Store["Write file to disk cache"]
+    Dec --> Put["Insert in memory cache"] --> Done
+    Gone["Last waiter goes away"] -. cancels .-> Fly
+```
+
 - **De-duplication:** requests for one image share one load.
 - **Cancellation is reference-counted.** A cell scrolling away cancels the load only when no other request is waiting on it.
-- **Prefetching:** the grid asks for the next 8 thumbnails as cells appear and the pager for the pages two away. Each call replaces the previous window and cancels loads that fell out of it.
+- **Prefetching:** as cells appear the grid view model asks for the next 8 thumbnails, and the pager's for the pages two away. Views only report what appeared; the view models decide what to load. Each call replaces the previous window and cancels loads that fell out of it.
 - **No second cache:** the loader's session has no `URLCache`, so nothing is stored twice.
 - **Counters:** `ImagePipelineStats` counts how each request was served (memory, joined, disk, download, decode, cancelled) and writes each as a Points of Interest event, so a recording shows the cache hit rate and downloads per URL.
 
 ## Performance
 
-Measured with Instruments on an iPhone 13 Pro (120 Hz), Release build: scroll to about 500 photos, back to photo 100, then open the pager and swipe through it. **Baseline** is plain `AsyncImage`.
+Measured with one scripted scenario, the same every run, on an iPhone 13 Pro with a Release build: cold launch on a recorded 577-photo feed, scroll down until 300 photos are loaded, scroll back to photo 100, open the pager and swipe 20 pages. The image loader is compared with plain `AsyncImage` (no prefetching) in the same build, using Instruments and counters in the app. The harness is not in `main`: it is on the `performance-profiling` branch, which also holds text summaries of every trace. Method, per-phase results and how to repeat them are in [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
-**Result:** paging hitch time fell from about 60 to 4 ms/s, decoded-image memory is capped, and each photo is downloaded once (except cancelled loads that restart), at the cost of about three times the baseline's memory.
+| Criterion | Image loader | `AsyncImage` | Evidence |
+|---|---|---|---|
+| Behaviour after several hundred images | Memory live at the end 141.7 MB, of which 116.6 MB is decoded images held in a 100 MB cache; bounded, not growing | 47.6 MB | Allocations |
+| Efficient loading, no duplicated work | 347 downloads for 316 distinct images; scrolling back over about 150 cells: 0 downloads, 71 disk reads | 466 requests for the same 316; scrolling back: 147 requests | Loader counters; unit test |
+| Unnecessary SwiftUI updates | One cell `body` per cell appearance (444 for 307 photos); the grid ran 4 times during the whole pager phase | Identical (448, 4) | `body` counters |
+| Scroll smoothness | 2.1 ms/s hitch time scrolling, 0.7 ms/s in the pager | 1.3 and 1.5 ms/s | Animation Hitches |
+| CPU | 50.4 s process CPU over the run, 43.8 s of it on the main thread | 51.4 s and 44.0 s | Time Profiler |
 
-| Criterion | Result | Evidence |
-|---|---|---|
-| After several hundred images | Decoded-image memory is capped by design; app memory was 134 and 139 MiB at the end of two runs of 506 photos (baseline 46 MiB) | Allocations and VM Tracker; cache limit 100 MB |
-| Efficient loading, no duplicated work | Warm start downloads nothing; cold start about 1.14 downloads per photo; decodes 869 and 894 (baseline 971) | The loader's counters: 563 downloads for 494 URLs, the extra 12% being cancelled loads that restarted |
-| Unnecessary SwiftUI updates | Grid updates while paging about 3,400/s before the pager owned its page, about 500/s now; paging hitch time 67 and 54 → 4 ms/s | SwiftUI instrument and Animation Hitches |
-| CPU and memory in Instruments | CPU rendering while paging 44% → 0%; main-thread CPU while paging 294 → 142 ms/s | Time Profiler; Allocations and VM Tracker |
+Both are well inside the 5 ms/s that Apple rates as good. The CPU is the same: nearly all main-thread time is in SwiftUI, UIKit and the runtime, and the app's own functions are under 0.5% of it.
 
-| Problem found | Fix | Effect |
-|---|---|---|
-| Caption text animated on every page and was drawn on the CPU | No animation on that bar | CPU rendering 44% → 0% |
-| Every page flip re-evaluated the grid under the pager | The pager owns its current page | Hitch time 56 and 84 → 41 ms/s |
-| Syncing the grid through `@State` re-ran the whole screen | Scroll it through a plain reference | 24 → 4 ms/s |
+**Trade-offs.**
+- **Memory for decodes.** The loader holds about three times the baseline's live memory. The cap is deliberate: decoded images are what is expensive to rebuild, and 100 MB holds about 140 thumbnails, so scrolling back over 150 cells re-decodes most of them from disk (71 decodes, no downloads). I chose bounded memory over fewer decodes because decoding is off the main thread and caused no late frames in the traces, while unbounded growth risks the app being killed in the background.
+- **Cancelling costs downloads.** About 9% of downloads (31 of 347) are repeats of loads that were cancelled by scrolling away and later requested again (27 cancelled loads in the run).
+- **`RemoteImage` re-evaluates more** (637 `body` runs against 494), because it publishes its load state; they are small leaf views.
+- **The pager runs its `body` about 16 times per swipe**, once per frame of the drag. It is the largest remaining body count.
 
-**Trade-off:** the 100 MB memory cache holds about 140 thumbnails, and the scroll back from 500 to 100 passes about 400, so roughly 60% of that trip is decoded again from disk. I chose bounded memory over fewer decodes: decoding is off the main thread and did not cause late frames, while memory growth risks the app being killed in the background.
-
-**Not shown:** the loader's effect on hitches (it landed in a recording of a different length), and a Time Profiler comparison of the grid scroll. Each figure is from one recording, with the scrolling done by hand.
+**What this does not show.** One run per mode, so there is no spread. The SwiftUI instrument recorded no update events in either trace, so the `body` counters, not that instrument, are the evidence for view updates. XCTest's physical-memory metric ordered the two modes the other way round (36.6 MB against 55.6 MB at the end) and I have not explained the difference; I used Allocations, which agrees with the Xcode memory gauge. In the Animation Hitches traces the marker between scrolling down and scrolling back was dropped, so those two phases are reported together.
 
 ## Tests
 
-Unit tests cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, and the image loader (shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling). The UI test target is Xcode's template and tests nothing.
+**Unit tests** cover the mapper and its fallbacks, the repository's error and rate-limit mapping, grid pagination and stale-response handling, search debounce, what each view model asks to be prefetched (with a recording fake), and the image loader: shared downloads, reference-counted cancellation, memory and disk hits, prefetch replacement, downsampling, and 500 photos asked for repeatedly downloaded exactly once.
+
+**UI tests** run the main flows with real touches against a fixed set of eight photos, so they need no network or access key: the feed loads, a photo opens with its photographer, swiping moves to the next photo, closing returns to the grid, search narrows the grid, and a search with no matches shows a message. The app is launched with `-ui-testing`, which swaps in `StubPhotoRepository` at the composition root.
 
 ## Assumptions and limitations
 
 - **The access key is kept out of git, but it is not secret.** `Secrets.xcconfig` is gitignored and not in the app target, but its value is substituted into `Info.plist` at build time, so it ships in the app bundle. A production app would proxy through a backend.
 - **Rate limit:** demo keys are limited per hour. The app shows a rate-limit state on a 403 with no remaining requests; that is covered by unit tests but not exercised against the live limit.
 - **No offline mode.** Images are disk-cached, but the feed is not persisted, so a cold start without a network shows the error state.
-- **Cancellation costs some downloads:** in the cold run 69 URLs were downloaded twice, about 12% extra, apparently loads cancelled and later requested again. The cause is not isolated.
-- **Measurements are one recording per state on one device, with the scrolling done by hand.** Small differences are within noise; the paging figures are the only ones I would call a clear trend.
+- **Cancellation costs some downloads:** in the scripted run about 31 of 347 downloads (9%) were repeats, apparently loads cancelled by scrolling away and later requested again (27 cancelled loads). The cause is not isolated.
+- **Measurements are one scripted run per mode, on one device.** Nothing has a spread, so small differences (hitch time, CPU) are not findings. See `docs/PERFORMANCE.md`.
 - **Attribution:** photographer links carry the Unsplash referral parameters; I have not checked the full attribution guidelines.

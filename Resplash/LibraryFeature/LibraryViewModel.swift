@@ -18,15 +18,18 @@ final class LibraryViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
 
     private let repository: PhotoRepository
+    private let prefetcher: ImagePrefetching
     private let searchDebounce: Duration
 
     init(
         repository: PhotoRepository,
+        prefetcher: ImagePrefetching,
         searchDebounce: Duration = .milliseconds(350)
     ) {
         self.repository = repository
+        self.prefetcher = prefetcher
         self.searchDebounce = searchDebounce
-        listViewModel = PhotoGridViewModel(source: .list, repository: repository)
+        listViewModel = PhotoGridViewModel(source: .list, repository: repository, prefetcher: prefetcher)
     }
 
     var trimmedQuery: String {
@@ -75,7 +78,7 @@ final class LibraryViewModel: ObservableObject {
 
     private func startSearch(for query: String) {
         searchViewModel?.cancel()
-        let results = PhotoGridViewModel(source: .search(query), repository: repository)
+        let results = PhotoGridViewModel(source: .search(query), repository: repository, prefetcher: prefetcher)
         searchViewModel = results
         results.loadFirstPageIfNeeded()
     }

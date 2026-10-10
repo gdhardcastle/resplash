@@ -22,8 +22,17 @@ nonisolated enum PerfMode {
         return ImageLoader.makeLive()
     }
 
+    /// The baseline is plain `AsyncImage`, which has no prefetching, so it gets a prefetcher that does nothing.
+    static func prefetcher(for loader: ImageLoader) -> ImagePrefetching {
+        usesAsyncImage ? NoPrefetching() : loader
+    }
+
     /// The repository for the scenario: the real mapper and repository over a recorded feed.
     static func makeRepository() -> PhotoRepository {
         UnsplashPhotoRepository(api: UnsplashAPI(accessKey: "perf"), client: ReplayHTTPClient())
     }
+}
+
+nonisolated private struct NoPrefetching: ImagePrefetching {
+    func prefetch(_ requests: [ImageRequest]) {}
 }
