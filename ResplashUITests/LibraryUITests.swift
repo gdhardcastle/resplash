@@ -1,8 +1,7 @@
 import XCTest
 
-/// The main flows, end to end, with real touches. The app is launched with `-ui-testing`, which gives
-/// it a fixed set of eight photos (see `StubPhotoRepository`), so the tests need no network or access
-/// key and see the same screen every time.
+/// The main flows, end to end, with real touches. The app is launched with `-ui-testing` and the photos in
+/// `TestPhotos`, so the tests need no network or access key and see the same screen every time.
 @MainActor
 final class LibraryUITests: XCTestCase {
 
@@ -11,37 +10,38 @@ final class LibraryUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app.launchArguments = ["-ui-testing"]
+        app.launchEnvironment["UITEST_PHOTOS"] = TestPhotos.json
         app.launch()
     }
 
     func testTheFeedShowsPhotos() {
-        XCTAssertTrue(photoCell("A snow-capped mountain at sunrise").waitForExistence(timeout: 10))
-        XCTAssertTrue(photoCell("A red bicycle leaning on a blue wall").exists)
+        XCTAssertTrue(photoCell(TestPhotos.mountain).waitForExistence(timeout: 10))
+        XCTAssertTrue(photoCell(TestPhotos.bicycle).exists)
     }
 
     func testOpeningAPhotoShowsItsPhotographer() {
-        openPhoto("A snow-capped mountain at sunrise")
-        XCTAssertTrue(element(labelBeginningWith: "Photo by Alex Rivera").waitForExistence(timeout: 5))
+        openPhoto(TestPhotos.mountain)
+        XCTAssertTrue(element(labelBeginningWith: "Photo by \(TestPhotos.mountain.photographer)").waitForExistence(timeout: 5))
     }
 
     func testSwipingTheViewerMovesToTheNextPhoto() {
-        openPhoto("A snow-capped mountain at sunrise")
+        openPhoto(TestPhotos.mountain)
         app.swipeLeft()
-        XCTAssertTrue(element(labelBeginningWith: "Photo by Sam Okafor").waitForExistence(timeout: 5),
+        XCTAssertTrue(element(labelBeginningWith: "Photo by \(TestPhotos.bicycle.photographer)").waitForExistence(timeout: 5),
                       "The second photo's photographer did not appear after swiping")
     }
 
     func testClosingTheViewerReturnsToTheGrid() {
-        openPhoto("A snow-capped mountain at sunrise")
+        openPhoto(TestPhotos.mountain)
         app.buttons["Close"].tap()
-        XCTAssertTrue(photoCell("A snow-capped mountain at sunrise").waitForExistence(timeout: 5))
+        XCTAssertTrue(photoCell(TestPhotos.mountain).waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Close"].exists)
     }
 
     func testSearchNarrowsTheGridToMatchingPhotos() {
         search(for: "mountain")
-        XCTAssertTrue(photoCell("A snow-capped mountain at sunrise").waitForExistence(timeout: 5))
-        XCTAssertFalse(photoCell("A red bicycle leaning on a blue wall").exists)
+        XCTAssertTrue(photoCell(TestPhotos.mountain).waitForExistence(timeout: 5))
+        XCTAssertFalse(photoCell(TestPhotos.bicycle).exists)
     }
 
     func testSearchWithNoMatchesShowsAMessage() {
@@ -58,16 +58,16 @@ final class LibraryUITests: XCTestCase {
         field.typeText(text)
     }
 
-    private func openPhoto(_ caption: String) {
-        let cell = photoCell(caption)
+    private func openPhoto(_ photo: TestPhotos.Photo) {
+        let cell = photoCell(photo)
         XCTAssertTrue(cell.waitForExistence(timeout: 10), "The feed did not load")
         cell.tap()
         XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: 5), "The viewer did not open")
     }
 
     /// A grid cell is a button whose combined label includes the photo's caption.
-    private func photoCell(_ caption: String) -> XCUIElement {
-        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", caption)).firstMatch
+    private func photoCell(_ photo: TestPhotos.Photo) -> XCUIElement {
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", photo.caption)).firstMatch
     }
 
     private func element(labelBeginningWith prefix: String) -> XCUIElement {
